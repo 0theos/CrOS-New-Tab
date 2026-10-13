@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CrOS New Tab",
-  "version": "1.1.0",
+  "version": "0.2.0",
   "description": "Пустая новая вкладка с адаптацией под цветовую гамму ChromeOS.",
   "icons": {
     "16": "icons/icon16.png",
@@ -13,6 +13,8 @@
   },
   "permissions": [
     "storage",
-    "management"
+    "management",
+    "search",
+    "unlimitedStorage"
   ]
 }
