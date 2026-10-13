@@ -1,6 +1,8 @@
 /* CrOS New Tab 0.2 — desktop layout */
 html, body { overflow: hidden; }
-body { display: block; padding: 0; }
+body { display: block; padding: 0; background-color: transparent; }
+/* html keeps the theme color; body must not hide the wallpaper */
+body.has-wallpaper { background-image: none; }
 
 #wallpaper, #wallpaper-dim { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 #wallpaper { background-size: cover; background-position: center; background-repeat: no-repeat; }

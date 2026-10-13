@@ -23,6 +23,29 @@
   };
   const uid = () => Math.random().toString(36).slice(2, 10);
   const normUrl = (u) => (/^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u);
+  // Shortcut targets: web, local files (path or file://), chrome:// pages, custom app schemes (steam://, vscode://, mailto: ...)
+  const BLOCKED_SCHEMES = ['javascript:', 'data:', 'vbscript:', 'blob:'];
+  function linkUrl(u) {
+    u = (u || '').trim();
+    if (!u) return null;
+    if (/^[a-z]:[\\/]/i.test(u)) u = 'file:///' + u.replace(/\\/g, '/');      // C:\dir\file
+    else if (u.startsWith('/')) u = 'file://' + u;                            // /home/user/file
+    else if (u.startsWith('~')) return null;
+    try {
+      const p = new URL(normUrl(u)).protocol;
+      return BLOCKED_SCHEMES.includes(p) ? null : new URL(normUrl(u)).href;
+    } catch { return null; }
+  }
+  function openLink(url, s) {
+    if (s && s.type === 'app' && chrome.management && chrome.management.launchApp) { chrome.management.launchApp(s.appId); return; }
+    const scheme = new URL(url).protocol;
+    if (scheme === 'http:' || scheme === 'https:') { location.href = url; return; }
+    // file:// and chrome:// are not navigable from a page, but the tabs API can open them
+    if ((scheme === 'file:' || scheme === 'chrome:') && chrome.tabs) { chrome.tabs.create({ url }); return; }
+    // Custom protocol: let the browser hand it to the registered app, without leaving this page
+    const a = el('a', { href: url, target: '_blank', rel: 'noopener' });
+    document.body.append(a); a.click(); a.remove();
+  }
   const safeUrl = (u) => { try { return ['http:', 'https:'].includes(new URL(normUrl(u)).protocol) ? normUrl(u) : null; } catch { return null; } };
 
   /* ---------- Fullscreen ---------- */
@@ -91,17 +114,24 @@
     });
     if (moved) save();
     state.shortcuts.forEach((s) => {
-      const url = safeUrl(s.url);
+      const isApp = s.type === 'app';
+      const url = isApp ? 'app:' + s.appId : linkUrl(s.url);
       if (!url) return;
       const icon = el('div', { className: 'shortcut-icon' });
-      const img = el('img', { alt: '', draggable: false });
-      img.src = 'https://www.google.com/s2/favicons?sz=64&domain_url=' + encodeURIComponent(url);
-      img.onerror = () => icon.replaceChildren(document.createTextNode((s.title || '?')[0].toUpperCase()));
-      icon.append(img);
+      const letter = () => icon.replaceChildren(document.createTextNode(isApp ? '▣' : (s.title || '?')[0].toUpperCase()));
+      const scheme = isApp ? 'app:' : new URL(url).protocol;
+      if (scheme === 'http:' || scheme === 'https:' || (isApp && s.icon)) {
+        const img = el('img', { alt: '', draggable: false });
+        img.src = isApp ? s.icon : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + encodeURIComponent(url);
+        img.onerror = letter;
+        icon.append(img);
+      } else {
+        icon.textContent = scheme === 'file:' ? '📁' : scheme === 'chrome:' ? '⚙' : '🔗';
+      }
       const node = el('div', { className: 'shortcut', tabIndex: 0, title: url }, icon, el('div', { className: 'shortcut-title', textContent: s.title || url }));
       node.style.left = GRID_LEFT + s.col * CELL_W + 'px';
       node.style.top = GRID_TOP + s.row * CELL_H + 'px';
-      const open = () => { location.href = url; };
+      const open = () => openLink(url, s);
       node.addEventListener('dblclick', open);
       node.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
       node.addEventListener('pointerdown', (e) => {
@@ -135,7 +165,7 @@
         node.classList.add('selected');
         menu(e.clientX, e.clientY, [
           ['Открыть', open],
-          ['Открыть в новой вкладке', () => window.open(url, '_blank')],
+          ...(isApp ? [] : [['Открыть в новой вкладке', () => window.open(url, '_blank')]]),
           ['Удалить', () => { state.shortcuts = state.shortcuts.filter((x) => x.id !== s.id); save(); renderShortcuts(); }],
         ]);
       });
@@ -166,16 +196,32 @@
     dlg.addEventListener('close', () => dlg.remove());
     document.body.append(dlg);
     dlg.showModal();
-    Object.values(inputs)[0].focus();
+    Object.values(inputs)[0]?.focus();
   }
 
   function addShortcutDialog() {
     dialog('Новый ярлык', [
       { name: 'title', label: 'Название', placeholder: 'YouTube' },
-      { name: 'url', label: 'Адрес', placeholder: 'youtube.com', required: true },
+      { name: 'url', label: 'Адрес, файл или приложение', placeholder: 'youtube.com, /home/user/doc.pdf, C:\\Docs\\a.txt, chrome://settings, steam://', required: true },
     ], (v) => {
-      if (!safeUrl(v.url)) return;
-      state.shortcuts.push({ id: uid(), title: v.title, url: normUrl(v.url), ...freeCell() });
+      const u = linkUrl(v.url);
+      if (!u) return;
+      state.shortcuts.push({ id: uid(), title: v.title || v.url.split(/[\\/]/).filter(Boolean).pop(), url: u, ...freeCell() });
+      save(); renderShortcuts();
+    });
+  }
+
+  // Installed Chrome/ChromeOS apps (uses the "management" permission)
+  async function addAppDialog() {
+    if (!(chrome.management && chrome.management.getAll)) return;
+    const all = await new Promise((r) => chrome.management.getAll(r));
+    const apps = all.filter((a) => a.isApp && a.enabled && a.type !== 'theme').sort((a, b) => a.name.localeCompare(b.name));
+    if (!apps.length) { dialog('Приложения не найдены', [], () => {}); return; }
+    dialog('Установленное приложение', [{ name: 'app', label: 'Приложение', options: apps.map((a) => [a.id, a.name]) }], (v) => {
+      const a = apps.find((x) => x.id === v.app);
+      if (!a) return;
+      const icon = (a.icons || []).slice().sort((x, y) => y.size - x.size)[0];
+      state.shortcuts.push({ id: uid(), type: 'app', appId: a.id, title: a.name, icon: icon ? icon.url : '', ...freeCell() });
       save(); renderShortcuts();
     });
   }
@@ -349,6 +395,8 @@
 
     const addSc = el('button', { className: 'btn', textContent: '+ Ярлык' });
     addSc.onclick = addShortcutDialog;
+    const addApp = el('button', { className: 'btn', textContent: '+ Приложение' });
+    addApp.onclick = addAppDialog;
     const addW = el('button', { className: 'btn', textContent: '+ Виджет' });
     addW.onclick = addWidgetDialog;
 
@@ -358,7 +406,7 @@
       sec('Обои', el('div', { className: 'btn-row' }, upload, byUrl, reset), el('div', { className: 'section-desc', textContent: 'Затемнение' }), dim, fileInput),
       sec('Полноэкранный режим', el('div', { className: 'btn-row' }, fsBtn),
         el('label', { className: 'settings-check' }, autoFs, document.createTextNode('Входить в полный экран по первому клику'))),
-      sec('Содержимое', el('div', { className: 'btn-row' }, addSc, addW)),
+      sec('Содержимое', el('div', { className: 'btn-row' }, addSc, addApp, addW)),
     );
   }
 
@@ -376,6 +424,7 @@
       e.preventDefault();
       menu(e.clientX, e.clientY, [
         ['Новый ярлык', addShortcutDialog],
+        ['Ярлык приложения…', addAppDialog],
         ['Новый виджет', addWidgetDialog],
         ['Полный экран', toggleFullscreen],
         ['Настройки и обои', () => $('settings-toggle').click()],
