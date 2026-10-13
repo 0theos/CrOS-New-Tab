@@ -7,14 +7,34 @@
   <style>
     :root {
       color-scheme: light dark;
-      /* Dynamic Theme Variables (overridden by newtab.js) */
-      --theme-bg: #202124;
-      --theme-card-bg: rgba(255, 255, 255, 0.08);
-      --theme-card-border: rgba(255, 255, 255, 0.12);
-      --theme-text: #ffffff;
-      --theme-text-subtle: rgba(255, 255, 255, 0.7);
-      --theme-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      --md-sys-font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      /* Base Pleasant Themes */
+      --default-bg-dark: #1e1f22;
+      --default-bg-light: #f8f9fa;
+
+      /* Dynamic Harmonic Tokens (computed by newtab.js) */
+      --theme-bg: var(--default-bg-dark);
+      --theme-surface: rgba(255, 255, 255, 0.07);
+      --theme-surface-high: rgba(255, 255, 255, 0.12);
+      --theme-border: rgba(255, 255, 255, 0.1);
+      --theme-accent: #8ab4f8;
+      --theme-text: #f2f2f2;
+      --theme-text-subtle: #9aa0a6;
+      --theme-ambient: rgba(138, 180, 248, 0.05);
+
+      --md-sys-font: 'Google Sans', 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-custom-theme="true"]) {
+        --theme-bg: var(--default-bg-light);
+        --theme-surface: rgba(0, 0, 0, 0.04);
+        --theme-surface-high: rgba(0, 0, 0, 0.08);
+        --theme-border: rgba(0, 0, 0, 0.08);
+        --theme-accent: #1a73e8;
+        --theme-text: #1f1f1f;
+        --theme-text-subtle: #5f6368;
+        --theme-ambient: rgba(26, 115, 232, 0.04);
+      }
     }
 
     *, *::before, *::after {
@@ -28,10 +48,10 @@
       height: 100%;
       background-color: var(--theme-bg);
       color: var(--theme-text);
-      font-family: var(--md-sys-font-family);
+      font-family: var(--md-sys-font);
       overflow: hidden;
       user-select: none;
-      transition: background-color 0.25s ease, color 0.25s ease;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     body {
@@ -39,32 +59,33 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding-top: 12vh;
+      padding-top: 13vh;
       position: relative;
+      background-image: radial-gradient(circle at 50% 22%, var(--theme-ambient), transparent 65%);
+      background-repeat: no-repeat;
     }
 
-    /* Material 3 Digital Clock Container */
+    /* Material 3 Digital Clock */
     .m3-clock-card {
       display: inline-flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px 48px;
-      background-color: var(--theme-card-bg);
+      padding: 26px 52px;
+      background-color: var(--theme-surface);
       border-radius: 32px;
-      border: 1px solid var(--theme-card-border);
-      box-shadow: var(--theme-shadow);
+      border: 1px solid var(--theme-border);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
       cursor: default;
-      /* No hover effects or transitions that highlight on hover */
-      transition: none;
+      transition: none; /* No hover highlight */
+      backdrop-filter: blur(12px);
     }
 
-    /* M3 Display Typography */
     .m3-time {
-      font-size: 4.75rem;
+      font-size: 5rem;
       font-weight: 400;
       line-height: 1;
-      letter-spacing: -1.5px;
+      letter-spacing: -2px;
       color: var(--theme-text);
       font-variant-numeric: tabular-nums;
       display: flex;
@@ -72,139 +93,306 @@
     }
 
     .m3-time-colon {
-      opacity: 0.85;
+      opacity: 0.8;
       padding: 0 2px;
     }
 
     .m3-date {
       margin-top: 10px;
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 500;
-      letter-spacing: 0.15px;
-      color: var(--theme-text-subtle);
+      letter-spacing: 0.2px;
+      color: var(--theme-accent);
       text-transform: capitalize;
     }
 
-    /* Minimalist Floating Theme Sync Tool in Bottom Corner */
-    .theme-tool-wrap {
+    /* Floating Settings Button in Bottom-Right Corner */
+    .settings-btn {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 12px;
-      z-index: 100;
-    }
-
-    .theme-trigger-btn {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      border: 1px solid var(--theme-card-border);
-      background-color: var(--theme-card-bg);
-      color: var(--theme-text);
+      border: 1px solid var(--theme-border);
+      background-color: var(--theme-surface);
+      color: var(--theme-text-subtle);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      opacity: 0.25;
-      transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+      outline: none;
+      transition: all 0.2s ease;
       backdrop-filter: blur(8px);
+      z-index: 1000;
     }
 
-    .theme-tool-wrap:hover .theme-trigger-btn,
-    .theme-trigger-btn:focus-visible,
-    .theme-tool-wrap.open .theme-trigger-btn {
-      opacity: 0.95;
-      transform: scale(1.05);
+    .settings-btn:hover {
+      color: var(--theme-text);
+      background-color: var(--theme-surface-high);
+      transform: rotate(30deg) scale(1.05);
     }
 
-    /* Theme Picker Popup Card */
-    .theme-popup {
+    /* Settings Panel */
+    .settings-panel {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      width: 310px;
+      background-color: var(--theme-surface);
+      border: 1px solid var(--theme-border);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(28px);
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 1000;
+      animation: panelPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .settings-panel.open {
+      display: flex;
+    }
+
+    @keyframes panelPop {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .settings-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--theme-text);
+    }
+
+    .settings-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--theme-text-subtle);
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: color 0.15s;
+    }
+
+    .settings-close-btn:hover {
+      color: var(--theme-text);
+    }
+
+    .section-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--theme-text);
+      margin-bottom: 2px;
+    }
+
+    .section-desc {
+      font-size: 11px;
+      color: var(--theme-text-subtle);
+      margin-bottom: 12px;
+    }
+
+    /* Color Palette Grid: 2 lines of 4 squares */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .palette-square {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .palette-square:hover {
+      transform: scale(1.06);
+    }
+
+    .palette-square.active {
+      border-color: var(--theme-text);
+      box-shadow: 0 0 0 2px var(--theme-border), 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .palette-square.active::after {
+      content: "✓";
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: bold;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Auto / System Preset (Split square) */
+    .square-auto {
+      background: linear-gradient(135deg, #1e1f22 50%, #f8f9fa 50%);
+      border: 1px solid var(--theme-border);
+    }
+
+    /* Rainbow Square */
+    .square-rainbow {
+      background: conic-gradient(
+        from 180deg at 50% 50%,
+        #ff4b4b 0deg,
+        #f59e0b 60deg,
+        #eab308 120deg,
+        #10b981 180deg,
+        #06b6d4 240deg,
+        #8b5cf6 300deg,
+        #ff4b4b 360deg
+      );
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Custom Picker Submenu (Wheel, Text, Eyedropper) */
+    .custom-picker-section {
       display: none;
       flex-direction: column;
       gap: 12px;
-      padding: 16px;
-      background-color: var(--theme-card-bg);
-      backdrop-filter: blur(24px);
-      border: 1px solid var(--theme-card-border);
-      border-radius: 20px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      width: 260px;
-      color: var(--theme-text);
-      animation: fadeIn 0.15s ease-out;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--theme-border);
+      animation: fadeIn 0.2s ease;
     }
 
-    .theme-tool-wrap.open .theme-popup {
+    .custom-picker-section.visible {
       display: flex;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    .theme-popup-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--theme-text);
+    .wheel-container {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #color-wheel-canvas {
+      cursor: crosshair;
+      border-radius: 50%;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      border: 2px solid var(--theme-border);
+    }
+
+    .slider-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-label {
+      font-size: 11px;
+      color: var(--theme-text-subtle);
+      width: 52px;
+    }
+
+    .range-slider {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      appearance: none;
+      background: linear-gradient(to right, #000000, #888888, #ffffff);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .range-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--theme-text);
+      border: 2px solid var(--theme-bg);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .picker-inputs-row {
+      display: flex;
+      gap: 8px;
       align-items: center;
     }
 
-    .theme-btn-action {
+    .color-preview-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      flex-shrink: 0;
+    }
+
+    .hex-input {
+      flex: 1;
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background-color: var(--theme-surface-high);
+      color: var(--theme-text);
+      font-family: monospace;
+      font-size: 12px;
+      outline: none;
+      text-transform: uppercase;
+    }
+
+    .hex-input:focus {
+      border-color: var(--theme-accent);
+    }
+
+    .eyedropper-btn {
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--theme-border);
+      background-color: var(--theme-surface-high);
+      color: var(--theme-text);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 8px 12px;
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 500;
-      border-radius: 12px;
-      border: 1px solid var(--theme-card-border);
-      background-color: rgba(255, 255, 255, 0.1);
-      color: var(--theme-text);
-      cursor: pointer;
-      transition: filter 0.15s ease;
-    }
-
-    .theme-btn-action:hover {
-      filter: brightness(1.15);
-    }
-
-    /* Preset color swatches */
-    .swatches-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
-    }
-
-    .swatch-btn {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: transform 0.12s;
-    }
-
-    .swatch-btn:hover {
-      transform: scale(1.15);
-    }
-
-    .theme-status-text {
+      gap: 4px;
       font-size: 11px;
-      color: var(--theme-text-subtle);
-      line-height: 1.3;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background-color 0.15s;
+    }
+
+    .eyedropper-btn:hover {
+      background-color: var(--theme-border);
     }
   </style>
 </head>
 <body>
-  <!-- M3 Digital Clock without hover highlight -->
+  <!-- M3 Digital Clock -->
   <main class="m3-clock-card" id="clock-card" aria-label="Часы">
     <div class="m3-time" id="clock-time">
       <span id="hours">--</span><span class="m3-time-colon">:</span><span id="minutes">--</span>
@@ -212,51 +400,72 @@
     <div class="m3-date" id="clock-date">--</div>
   </main>
 
-  <!-- Theme Detection & Sync Widget -->
-  <div class="theme-tool-wrap" id="theme-widget">
-    <div class="theme-popup" id="theme-popup">
-      <div class="theme-popup-title">
-        <span>Цвет темы браузера</span>
-        <span id="active-hex" style="font-family:monospace; font-size:11px; opacity:0.8;">#---</span>
-      </div>
+  <!-- Settings Gear Button -->
+  <button class="settings-btn" id="settings-toggle" aria-label="Настройки" title="Настройки">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
 
-      <!-- EyeDropper API Button -->
-      <button class="theme-btn-action" id="btn-eyedropper" title="Нажмите и кликните по вкладке или панели браузера">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m14 2 4 4L7 17l-4 1 1-4 11-11z" />
-          <path d="m13 7 4 4" />
-        </svg>
-        <span>Пипетка (взять цвет браузера)</span>
-      </button>
+  <!-- Settings Panel -->
+  <aside class="settings-panel" id="settings-panel">
+    <div class="settings-header">
+      <h2 class="settings-title">Настройки</h2>
+      <button class="settings-close-btn" id="settings-close" title="Закрыть">✕</button>
+    </div>
 
-      <!-- Auto detect button -->
-      <button class="theme-btn-action" id="btn-autodetect" title="Считать цвет темы системы или установленной темы">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-          <path d="M3 3v5h5" />
-          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-          <path d="M16 21h5v-5" />
-        </svg>
-        <span>Авто-определение темы</span>
-      </button>
+    <div class="settings-section">
+      <div class="section-label">Цветовая гамма</div>
+      <div class="section-desc">Выберите тему или создайте свой цвет</div>
 
-      <!-- Preset Chrome Palettes -->
-      <div class="swatches-grid" id="swatches-container"></div>
+      <!-- 2 lines of 4 squares (8 squares total) -->
+      <div class="palette-grid" id="palette-grid">
+        <!-- 1. Auto/System (pleasant grey/white) -->
+        <button class="palette-square square-auto" data-preset="auto" title="Автоматически (по теме браузера)"></button>
+        <!-- 2. Ocean Blue -->
+        <button class="palette-square" data-color="#1e293b" style="background-color: #1e293b;" title="Синий океан"></button>
+        <!-- 3. Emerald Sage -->
+        <button class="palette-square" data-color="#143026" style="background-color: #143026;" title="Изумрудный"></button>
+        <!-- 4. Warm Amber -->
+        <button class="palette-square" data-color="#312213" style="background-color: #312213;" title="Янтарный"></button>
 
-      <div class="theme-status-text" id="theme-status-info">
-        Синхронизировано с цветом интерфейса
+        <!-- 5. Deep Amethyst -->
+        <button class="palette-square" data-color="#251636" style="background-color: #251636;" title="Аметист"></button>
+        <!-- 6. Dusty Rose / Coral -->
+        <button class="palette-square" data-color="#321620" style="background-color: #321620;" title="Коралловый"></button>
+        <!-- 7. Midnight Teal -->
+        <button class="palette-square" data-color="#102b30" style="background-color: #102b30;" title="Морской циан"></button>
+        <!-- 8. Rainbow (Custom Picker) -->
+        <button class="palette-square square-rainbow" id="rainbow-square" title="Свой цвет (колесо, текст, пипетка)"></button>
       </div>
     </div>
 
-    <!-- Floating Trigger Icon Button -->
-    <button class="theme-trigger-btn" id="theme-trigger" aria-label="Настроить цвет темы" title="Цвет темы браузера">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a10 10 0 0 1-10-10C2 6.477 6.477 2 12 2z" />
-        <path d="M12 2v20" />
-      </svg>
-    </button>
-  </div>
+    <!-- Custom Color Sub-Menu -->
+    <div class="custom-picker-section" id="custom-picker-section">
+      <!-- Color Wheel Canvas -->
+      <div class="wheel-container">
+        <canvas id="color-wheel-canvas" width="130" height="130"></canvas>
+        <div class="slider-row">
+          <span class="slider-label">Яркость</span>
+          <input type="range" class="range-slider" id="lightness-slider" min="5" max="95" value="15">
+        </div>
+      </div>
+
+      <!-- Text Input and Eyedropper -->
+      <div class="picker-inputs-row">
+        <div class="color-preview-badge" id="color-preview-badge"></div>
+        <input type="text" class="hex-input" id="custom-hex-input" placeholder="#1E1F22" maxlength="7">
+        <button class="eyedropper-btn" id="eyedropper-btn" title="Взять цвет с экрана">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m14 2 4 4L7 17l-4 1 1-4 11-11z"></path>
+            <path d="m13 7 4 4"></path>
+          </svg>
+          <span>Пипетка</span>
+        </button>
+      </div>
+    </div>
+  </aside>
 
   <script src="newtab.js"></script>
 </body>

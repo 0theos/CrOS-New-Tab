@@ -1,11 +1,12 @@
 /**
- * CrOS Material 3 Digital Clock & Browser Theme Color Sync
+ * CrOS Material 3 New Tab — Clock & Harmonic Palette System
  */
 
-// 1. Clock Logic
+// ==========================================
+// 1. Digital Clock Logic
+// ==========================================
 function updateClock() {
   const now = new Date();
-
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
 
@@ -13,13 +14,8 @@ function updateClock() {
   const minutesEl = document.getElementById('minutes');
   const dateEl = document.getElementById('clock-date');
 
-  if (hoursEl && hoursEl.textContent !== hours) {
-    hoursEl.textContent = hours;
-  }
-
-  if (minutesEl && minutesEl.textContent !== minutes) {
-    minutesEl.textContent = minutes;
-  }
+  if (hoursEl && hoursEl.textContent !== hours) hoursEl.textContent = hours;
+  if (minutesEl && minutesEl.textContent !== minutes) minutesEl.textContent = minutes;
 
   if (dateEl) {
     const locale = navigator.language || 'ru-RU';
@@ -28,55 +24,31 @@ function updateClock() {
       day: 'numeric',
       month: 'long'
     });
-
     const dateStr = formatter.format(now);
     const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-
-    if (dateEl.textContent !== formattedDate) {
-      dateEl.textContent = formattedDate;
-    }
+    if (dateEl.textContent !== formattedDate) dateEl.textContent = formattedDate;
   }
 }
 
 updateClock();
-const delayToNextSecond = 1000 - (new Date().getMilliseconds());
 setTimeout(() => {
   updateClock();
   setInterval(updateClock, 1000);
-}, delayToNextSecond);
+}, 1000 - new Date().getMilliseconds());
 
 
-// 2. Color Utility Functions
-function parseColorToRgb(colorStr) {
-  if (!colorStr) return null;
-  colorStr = colorStr.trim();
-
-  // Hex format (#rgb or #rrggbb)
-  if (colorStr.startsWith('#')) {
-    let hex = colorStr.slice(1);
-    if (hex.length === 3) {
-      hex = hex.split('').map(c => c + c).join('');
-    }
-    if (hex.length === 6) {
-      return {
-        r: parseInt(hex.slice(0, 2), 16),
-        g: parseInt(hex.slice(2, 4), 16),
-        b: parseInt(hex.slice(4, 6), 16)
-      };
-    }
-  }
-
-  // RGB / RGBA format
-  const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-  if (rgbMatch) {
-    return {
-      r: parseInt(rgbMatch[1], 10),
-      g: parseInt(rgbMatch[2], 10),
-      b: parseInt(rgbMatch[3], 10)
-    };
-  }
-
-  return null;
+// ==========================================
+// 2. Color Conversion & Harmonic Palette Math
+// ==========================================
+function hexToRgb(hex) {
+  hex = hex.replace('#', '').trim();
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length !== 6) return null;
+  return {
+    r: parseInt(hex.slice(0, 2), 16),
+    g: parseInt(hex.slice(2, 4), 16),
+    b: parseInt(hex.slice(4, 6), 16)
+  };
 }
 
 function rgbToHex(r, g, b) {
@@ -84,209 +56,439 @@ function rgbToHex(r, g, b) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
 
-// 3. Theme Application Engine
-function applyThemeColor(colorInput, sourceName = 'пользовательский') {
-  const rgb = parseColorToRgb(colorInput);
-  if (!rgb) return;
-
-  const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-
-  // Calculate relative luminance: (0.2126 * R + 0.7152 * G + 0.0722 * B)
-  const lum = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
-  const isDark = lum < 135;
-
-  const root = document.documentElement;
-
-  // Set page background to exact browser theme color
-  root.style.setProperty('--theme-bg', hex);
-
-  if (isDark) {
-    root.style.setProperty('--theme-text', '#ffffff');
-    root.style.setProperty('--theme-text-subtle', 'rgba(255, 255, 255, 0.72)');
-    root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.08)');
-    root.style.setProperty('--theme-card-border', 'rgba(255, 255, 255, 0.12)');
-    root.style.setProperty('--theme-shadow', '0 4px 20px rgba(0, 0, 0, 0.25)');
-  } else {
-    root.style.setProperty('--theme-text', '#1f1f1f');
-    root.style.setProperty('--theme-text-subtle', 'rgba(0, 0, 0, 0.65)');
-    root.style.setProperty('--theme-card-bg', 'rgba(0, 0, 0, 0.05)');
-    root.style.setProperty('--theme-card-border', 'rgba(0, 0, 0, 0.08)');
-    root.style.setProperty('--theme-shadow', '0 4px 20px rgba(0, 0, 0, 0.06)');
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
   }
+  return { h, s, l };
+}
 
-  // Update UI indicators
-  const hexEl = document.getElementById('active-hex');
-  if (hexEl) hexEl.textContent = hex.toUpperCase();
+function hslToRgb(h, s, l) {
+  h = (h % 360 + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
 
-  const statusEl = document.getElementById('theme-status-info');
-  if (statusEl) statusEl.textContent = `Цвет: ${hex.toUpperCase()} (${sourceName})`;
+  if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+  else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+  else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+  else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+  else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+  else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
 
-  // Save to chrome.storage.local
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.set({
-      browser_theme_color: hex,
-      browser_theme_source: sourceName
-    });
-  } else {
-    localStorage.setItem('browser_theme_color', hex);
-  }
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255)
+  ];
 }
 
 
-// 4. Browser Theme Detection Engine
-async function detectBrowserTheme() {
-  // Method A: Check for Chrome Themes installed via chrome.management
-  if (typeof chrome !== 'undefined' && chrome.management && chrome.management.getAll) {
-    try {
-      const extensions = await new Promise(res => chrome.management.getAll(res));
-      const activeTheme = extensions.find(e => e.type === 'theme' && e.enabled);
+// ==========================================
+// 3. Harmonic Theme Applicator
+// ==========================================
+function applyHarmonicTheme(hexColor, isAuto = false) {
+  const root = document.documentElement;
 
-      if (activeTheme) {
-        console.log('[CrOS NewTab] Найдена установленная тема Chrome:', activeTheme.name);
-        const knownThemes = {
-          'Classic Blue': '#2a56c6',
-          'Just Black': '#202124',
-          'Slate': '#4f5b66',
-          'Oceanic': '#2e7d6b',
-          'Sea Foam': '#80cbc4',
-          'Rose Gold': '#b76e79',
-          'Banana': '#ffe135',
-          'High Contrast': '#000000',
-          'Nord': '#2e3440',
-          'Dracula': '#282a36'
-        };
-
-        if (knownThemes[activeTheme.name]) {
-          applyThemeColor(knownThemes[activeTheme.name], `тема "${activeTheme.name}"`);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Management API error:', e);
+  if (isAuto) {
+    root.removeAttribute('data-custom-theme');
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
+      root.style.setProperty('--theme-bg', '#1e1f22');
+      root.style.setProperty('--theme-surface', 'rgba(255, 255, 255, 0.07)');
+      root.style.setProperty('--theme-surface-high', 'rgba(255, 255, 255, 0.12)');
+      root.style.setProperty('--theme-border', 'rgba(255, 255, 255, 0.10)');
+      root.style.setProperty('--theme-accent', '#8ab4f8');
+      root.style.setProperty('--theme-text', '#f2f2f2');
+      root.style.setProperty('--theme-text-subtle', '#9aa0a6');
+      root.style.setProperty('--theme-ambient', 'rgba(138, 180, 248, 0.05)');
+    } else {
+      root.style.setProperty('--theme-bg', '#f8f9fa');
+      root.style.setProperty('--theme-surface', 'rgba(0, 0, 0, 0.04)');
+      root.style.setProperty('--theme-surface-high', 'rgba(0, 0, 0, 0.08)');
+      root.style.setProperty('--theme-border', 'rgba(0, 0, 0, 0.08)');
+      root.style.setProperty('--theme-accent', '#1a73e8');
+      root.style.setProperty('--theme-text', '#1f1f1f');
+      root.style.setProperty('--theme-text-subtle', '#5f6368');
+      root.style.setProperty('--theme-ambient', 'rgba(26, 115, 232, 0.04)');
     }
-  }
 
-  // Method B: CSS System AccentColor Detection
-  const probe = document.createElement('div');
-  probe.style.cssText = 'color: AccentColor !important; position: absolute; visibility: hidden;';
-  document.body.appendChild(probe);
-  const accentComputed = getComputedStyle(probe).color;
-  document.body.removeChild(probe);
-
-  const rgb = parseColorToRgb(accentComputed);
-  if (rgb && !(rgb.r === 0 && rgb.g === 0 && rgb.b === 0) && !(rgb.r === 255 && rgb.g === 255 && rgb.b === 255)) {
-    applyThemeColor(rgbToHex(rgb.r, rgb.g, rgb.b), 'системный акцент');
+    savePreference('auto', null);
     return;
   }
 
-  // Method C: Chrome Default (prefers-color-scheme)
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyThemeColor(isDark ? '#202124' : '#ffffff', 'по умолчанию');
+  const rgb = hexToRgb(hexColor);
+  if (!rgb) return;
+
+  root.setAttribute('data-custom-theme', 'true');
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const isDark = hsl.l < 0.55;
+
+  // Harmonic color generation derived from the base color
+  const lSurface = isDark ? Math.min(0.96, hsl.l + 0.08) : Math.max(0.88, hsl.l - 0.06);
+  const lSurfaceHigh = isDark ? Math.min(0.98, hsl.l + 0.15) : Math.max(0.82, hsl.l - 0.12);
+
+  // Vibrant accent for highlights, date, active rings
+  const lAccent = isDark ? 0.72 : 0.42;
+  const sAccent = Math.max(0.55, Math.min(1.0, hsl.s * 1.35));
+
+  // Contrasting text with harmonious tint
+  const lText = isDark ? 0.95 : 0.12;
+  const lSubtle = isDark ? 0.74 : 0.40;
+
+  const rgbSurface = hslToRgb(hsl.h, hsl.s * 0.9, lSurface);
+  const rgbSurfaceHigh = hslToRgb(hsl.h, hsl.s * 0.9, lSurfaceHigh);
+  const rgbAccent = hslToRgb(hsl.h, sAccent, lAccent);
+  const rgbText = hslToRgb(hsl.h, hsl.s * 0.18, lText);
+  const rgbSubtle = hslToRgb(hsl.h, hsl.s * 0.18, lSubtle);
+
+  root.style.setProperty('--theme-bg', hexColor);
+  root.style.setProperty('--theme-surface', `rgba(${rgbSurface[0]}, ${rgbSurface[1]}, ${rgbSurface[2]}, ${isDark ? 0.6 : 0.7})`);
+  root.style.setProperty('--theme-surface-high', `rgba(${rgbSurfaceHigh[0]}, ${rgbSurfaceHigh[1]}, ${rgbSurfaceHigh[2]}, 0.85)`);
+  root.style.setProperty('--theme-border', `rgba(${rgbAccent[0]}, ${rgbAccent[1]}, ${rgbAccent[2]}, 0.22)`);
+  root.style.setProperty('--theme-accent', rgbToHex(rgbAccent[0], rgbAccent[1], rgbAccent[2]));
+  root.style.setProperty('--theme-text', rgbToHex(rgbText[0], rgbText[1], rgbText[2]));
+  root.style.setProperty('--theme-text-subtle', rgbToHex(rgbSubtle[0], rgbSubtle[1], rgbSubtle[2]));
+  root.style.setProperty('--theme-ambient', `rgba(${rgbAccent[0]}, ${rgbAccent[1]}, ${rgbAccent[2]}, 0.08)`);
+
+  savePreference('custom', hexColor);
+}
+
+function savePreference(mode, color) {
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.set({ cros_palette_mode: mode, cros_palette_color: color });
+  } else {
+    localStorage.setItem('cros_palette_mode', mode);
+    if (color) localStorage.setItem('cros_palette_color', color);
+  }
 }
 
 
-// 5. Initialize & Event Listeners
-document.addEventListener('DOMContentLoaded', async () => {
-  // Restore saved theme color if available
-  let savedColor = null;
+// ==========================================
+// 4. Color Wheel Canvas & Controls
+// ==========================================
+class ColorWheelPicker {
+  constructor(canvas, slider, hexInput, previewBadge, onColorChange) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.slider = slider;
+    this.hexInput = hexInput;
+    this.previewBadge = previewBadge;
+    this.onColorChange = onColorChange;
 
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    const res = await new Promise(r => chrome.storage.local.get(['browser_theme_color', 'browser_theme_source'], r));
-    if (res && res.browser_theme_color) {
-      savedColor = res.browser_theme_color;
-      applyThemeColor(savedColor, res.browser_theme_source || 'сохраненный');
+    this.currentH = 210;
+    this.currentS = 0.5;
+    this.currentL = 0.2;
+    this.isDragging = false;
+
+    this.init();
+  }
+
+  init() {
+    this.drawWheel();
+
+    // Mouse / Touch events on wheel
+    const handlePick = (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      const x = clientX - rect.left - cx;
+      const y = clientY - rect.top - cy;
+
+      const dist = Math.sqrt(x * x + y * y);
+      const maxRadius = cx - 2;
+
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      if (angle < 0) angle += 360;
+
+      this.currentH = angle;
+      this.currentS = Math.min(1, dist / maxRadius);
+
+      this.updateColor();
+    };
+
+    this.canvas.addEventListener('mousedown', (e) => {
+      this.isDragging = true;
+      handlePick(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (this.isDragging) handlePick(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.isDragging = false;
+    });
+
+    // Touch support
+    this.canvas.addEventListener('touchstart', (e) => {
+      this.isDragging = true;
+      handlePick(e);
+      e.preventDefault();
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (this.isDragging) handlePick(e);
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      this.isDragging = false;
+    });
+
+    // Slider event
+    this.slider.addEventListener('input', () => {
+      this.currentL = parseInt(this.slider.value, 10) / 100;
+      this.updateColor();
+    });
+
+    // Text input event
+    this.hexInput.addEventListener('input', () => {
+      let val = this.hexInput.value.trim();
+      if (!val.startsWith('#')) val = '#' + val;
+      const rgb = hexToRgb(val);
+      if (rgb) {
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        this.currentH = hsl.h;
+        this.currentS = hsl.s;
+        this.currentL = hsl.l;
+        this.slider.value = Math.round(hsl.l * 100);
+        this.drawWheel();
+        this.previewBadge.style.backgroundColor = val;
+        this.onColorChange(val);
+      }
+    });
+  }
+
+  setColor(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    this.currentH = hsl.h;
+    this.currentS = hsl.s;
+    this.currentL = hsl.l;
+    this.slider.value = Math.round(hsl.l * 100);
+    this.updateColor(false);
+  }
+
+  updateColor(triggerCallback = true) {
+    const rgb = hslToRgb(this.currentH, this.currentS, this.currentL);
+    const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+
+    this.drawWheel();
+    this.previewBadge.style.backgroundColor = hex;
+    this.hexInput.value = hex.toUpperCase();
+
+    if (triggerCallback) {
+      this.onColorChange(hex);
     }
-  } else {
-    savedColor = localStorage.getItem('browser_theme_color');
-    if (savedColor) applyThemeColor(savedColor, 'сохраненный');
   }
 
-  if (!savedColor) {
-    await detectBrowserTheme();
+  drawWheel() {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = cx - 2;
+
+    const imgData = this.ctx.createImageData(w, h);
+    const data = imgData.data;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= radius) {
+          let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          if (angle < 0) angle += 360;
+          const sat = dist / radius;
+          const [r, g, b] = hslToRgb(angle, sat, 0.5);
+
+          const idx = (y * w + x) * 4;
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+    }
+    this.ctx.putImageData(imgData, 0, 0);
+
+    // Crosshair dot
+    const rad = this.currentH * (Math.PI / 180);
+    const d = this.currentS * radius;
+    const px = cx + Math.cos(rad) * d;
+    const py = cy + Math.sin(rad) * d;
+
+    this.ctx.beginPath();
+    this.ctx.arc(px, py, 5, 0, Math.PI * 2);
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
+
+    this.ctx.beginPath();
+    this.ctx.arc(px, py, 3, 0, Math.PI * 2);
+    this.ctx.strokeStyle = '#000000';
+    this.ctx.lineWidth = 1;
+    this.ctx.stroke();
   }
+}
 
-  // Auto-detect button
-  document.getElementById('btn-autodetect')?.addEventListener('click', async () => {
-    await detectBrowserTheme();
-  });
 
-  // Native EyeDropper API (1-click sampling of browser frame / toolbar)
-  const btnEyedropper = document.getElementById('btn-eyedropper');
-  if (btnEyedropper) {
+// ==========================================
+// 5. Initial Setup & UI Event Wiring
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+  const settingsBtn = document.getElementById('settings-toggle');
+  const settingsPanel = document.getElementById('settings-panel');
+  const settingsClose = document.getElementById('settings-close');
+  const paletteSquares = document.querySelectorAll('.palette-square');
+  const customSection = document.getElementById('custom-picker-section');
+  const rainbowSquare = document.getElementById('rainbow-square');
+
+  const wheelCanvas = document.getElementById('color-wheel-canvas');
+  const lightnessSlider = document.getElementById('lightness-slider');
+  const hexInput = document.getElementById('custom-hex-input');
+  const previewBadge = document.getElementById('color-preview-badge');
+  const eyedropperBtn = document.getElementById('eyedropper-btn');
+
+  // Initialize Color Wheel
+  const colorPicker = new ColorWheelPicker(
+    wheelCanvas,
+    lightnessSlider,
+    hexInput,
+    previewBadge,
+    (hex) => {
+      applyHarmonicTheme(hex, false);
+      highlightActiveSquare(rainbowSquare);
+    }
+  );
+
+  // Eyedropper API handler
+  if (eyedropperBtn) {
     if ('EyeDropper' in window) {
-      btnEyedropper.addEventListener('click', async () => {
+      eyedropperBtn.addEventListener('click', async () => {
         try {
           const eyeDropper = new window.EyeDropper();
           const result = await eyeDropper.open();
           if (result && result.sRGBHex) {
-            applyThemeColor(result.sRGBHex, 'пипетка');
+            colorPicker.setColor(result.sRGBHex);
+            applyHarmonicTheme(result.sRGBHex, false);
+            highlightActiveSquare(rainbowSquare);
           }
         } catch (err) {
-          // User canceled selection or not allowed
           console.log('EyeDropper canceled:', err);
         }
       });
     } else {
-      btnEyedropper.style.display = 'none';
+      eyedropperBtn.style.display = 'none';
     }
   }
 
-  // Preset Chrome 2023 Refresh Theme Swatches
-  const chromePalettes = [
-    '#202124', // Chrome Dark
-    '#ffffff', // Chrome White
-    '#2a56c6', // Classic Blue
-    '#1a73e8', // Google Blue
-    '#00897b', // Teal / Sea Foam
-    '#2e7d32', // Forest Green
-    '#ff8f00', // Amber / Sun
-    '#e53935', // Coral / Rose
-    '#7c4dff', // Purple
-    '#9c27b0', // Fuchsia
-    '#4f5b66', // Slate
-    '#8d6e63', // Desert Warm
-    '#37474f', // Deep Charcoal
-    '#006064'  // Deep Cyan
-  ];
-
-  const swatchesContainer = document.getElementById('swatches-container');
-  if (swatchesContainer) {
-    chromePalettes.forEach(hex => {
-      const btn = document.createElement('button');
-      btn.className = 'swatch-btn';
-      btn.style.backgroundColor = hex;
-      btn.title = hex;
-      btn.addEventListener('click', () => {
-        applyThemeColor(hex, 'палитра');
-      });
-      swatchesContainer.appendChild(btn);
-    });
+  function highlightActiveSquare(activeEl) {
+    paletteSquares.forEach(sq => sq.classList.remove('active'));
+    if (activeEl) activeEl.classList.add('active');
   }
 
-  // Floating Widget Toggle
-  const widgetWrap = document.getElementById('theme-widget');
-  const triggerBtn = document.getElementById('theme-trigger');
+  // Preset square clicks
+  paletteSquares.forEach(sq => {
+    sq.addEventListener('click', () => {
+      const preset = sq.getAttribute('data-preset');
+      const color = sq.getAttribute('data-color');
 
-  triggerBtn?.addEventListener('click', (e) => {
+      if (sq === rainbowSquare) {
+        // Toggle Custom Picker
+        const isVisible = customSection.classList.toggle('visible');
+        if (isVisible) {
+          highlightActiveSquare(rainbowSquare);
+        }
+        return;
+      }
+
+      customSection.classList.remove('visible');
+      highlightActiveSquare(sq);
+
+      if (preset === 'auto') {
+        applyHarmonicTheme(null, true);
+      } else if (color) {
+        applyHarmonicTheme(color, false);
+        colorPicker.setColor(color);
+      }
+    });
+  });
+
+  // Settings Panel Toggle
+  settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    widgetWrap?.classList.toggle('open');
+    settingsPanel.classList.toggle('open');
+  });
+
+  settingsClose.addEventListener('click', () => {
+    settingsPanel.classList.remove('open');
   });
 
   document.addEventListener('click', (e) => {
-    if (widgetWrap && !widgetWrap.contains(e.target)) {
-      widgetWrap.classList.remove('open');
+    if (!settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+      settingsPanel.classList.remove('open');
     }
   });
 
-  // Listen to prefers-color-scheme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['browser_theme_color', 'browser_theme_source'], (data) => {
-        if (!data.browser_theme_color || data.browser_theme_source === 'по умолчанию') {
-          applyThemeColor(e.matches ? '#202124' : '#ffffff', 'по умолчанию');
-        }
-      });
+  // Restore saved theme or default to Auto
+  let savedMode = 'auto';
+  let savedColor = null;
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const res = await new Promise(r => chrome.storage.local.get(['cros_palette_mode', 'cros_palette_color'], r));
+    if (res && res.cros_palette_mode) {
+      savedMode = res.cros_palette_mode;
+      savedColor = res.cros_palette_color;
+    }
+  } else {
+    savedMode = localStorage.getItem('cros_palette_mode') || 'auto';
+    savedColor = localStorage.getItem('cros_palette_color');
+  }
+
+  if (savedMode === 'custom' && savedColor) {
+    applyHarmonicTheme(savedColor, false);
+    colorPicker.setColor(savedColor);
+
+    // Check if it matches a preset
+    let matched = false;
+    paletteSquares.forEach(sq => {
+      if (sq.getAttribute('data-color') === savedColor) {
+        highlightActiveSquare(sq);
+        matched = true;
+      }
+    });
+    if (!matched) {
+      highlightActiveSquare(rainbowSquare);
+    }
+  } else {
+    applyHarmonicTheme(null, true);
+    highlightActiveSquare(document.querySelector('.square-auto'));
+  }
+
+  // System theme change listener (for Auto mode)
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const isAuto = !document.documentElement.hasAttribute('data-custom-theme');
+    if (isAuto) {
+      applyHarmonicTheme(null, true);
     }
   });
 });
