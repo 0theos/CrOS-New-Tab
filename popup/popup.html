@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrOS Modular Suite</title>
+  <link rel="stylesheet" href="../styles/theme.css">
+  <link rel="stylesheet" href="../styles/shared.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="cros-popup-container">
+    <!-- Header -->
+    <header class="cros-header">
+      <div class="cros-header-left">
+        <div class="cros-app-icon">
+          <img src="../icons/icon48.png" alt="Icon" width="24" height="24">
+        </div>
+        <div>
+          <h1 class="cros-title-small">CrOS Assistant</h1>
+          <div class="cros-theme-indicator" id="theme-indicator">Системная тема</div>
+        </div>
+      </div>
+      <div class="cros-header-actions">
+        <button class="cros-icon-btn" id="btn-open-sidepanel" title="Открыть в боковой панели ChromeOS">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="15" y1="3" x2="15" y2="21" />
+          </svg>
+        </button>
+        <button class="cros-icon-btn" id="btn-open-options" title="Настройки">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Module Switcher Tabs -->
+    <nav class="cros-tabs-nav" id="module-tabs" role="tablist">
+      <!-- Injected dynamically -->
+    </nav>
+
+    <!-- Active Module Viewport -->
+    <main class="cros-module-viewport" id="module-viewport">
+      <div class="cros-card" id="module-content">
+        <!-- Rendered module UI -->
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="cros-footer">
+      <span class="cros-caption">ChromeOS Modular v1.0</span>
+      <span class="cros-caption" id="active-tab-info">...</span>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

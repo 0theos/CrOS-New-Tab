@@ -1,0 +1,232 @@
+/**
+ * ChromeOS Native Theme Engine
+ * Automatically adapts to ChromeOS light/dark mode and Material Design 3 palette.
+ */
+
+:root {
+  /* System Typography matching ChromeOS / Google Sans */
+  --cros-font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --cros-font-mono: 'Roboto Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+
+  /* Metric & Spacing tokens */
+  --cros-space-2xs: 2px;
+  --cros-space-xs: 4px;
+  --cros-space-sm: 8px;
+  --cros-space-md: 12px;
+  --cros-space-lg: 16px;
+  --cros-space-xl: 20px;
+  --cros-space-2xl: 24px;
+
+  /* Shape & Corner Radii tokens (Material 3) */
+  --cros-radius-xs: 4px;
+  --cros-radius-sm: 8px;
+  --cros-radius-md: 12px;
+  --cros-radius-lg: 16px;
+  --cros-radius-xl: 24px;
+  --cros-radius-full: 9999px;
+
+  /* Transition timings matching ChromeOS animation curves */
+  --cros-transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+  --cros-transition-normal: 250ms cubic-bezier(0.2, 0, 0, 1);
+  --cros-transition-slow: 350ms cubic-bezier(0.05, 0.7, 0.1, 1);
+
+  /* Default Light Palette (ChromeOS Material You Default) */
+  --cros-primary: #1a73e8;
+  --cros-primary-hover: #1765cc;
+  --cros-primary-container: #d2e3fc;
+  --cros-on-primary: #ffffff;
+  --cros-on-primary-container: #0d47a1;
+
+  --cros-surface: #ffffff;
+  --cros-surface-container: #f1f3f4;
+  --cros-surface-container-high: #e8eaed;
+  --cros-surface-variant: #f8f9fa;
+  --cros-on-surface: #202124;
+  --cros-on-surface-variant: #5f6368;
+
+  --cros-outline: #dadce0;
+  --cros-outline-variant: #e8eaed;
+  --cros-divider: rgba(60, 64, 67, 0.12);
+
+  --cros-state-hover: rgba(32, 33, 36, 0.04);
+  --cros-state-active: rgba(32, 33, 36, 0.08);
+  --cros-state-focus: rgba(26, 115, 232, 0.16);
+
+  --cros-shadow-1: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --cros-shadow-2: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+  --cros-shadow-3: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+
+  --cros-badge-success-bg: #e6f4ea;
+  --cros-badge-success-text: #137333;
+  --cros-badge-info-bg: #e8f0fe;
+  --cros-badge-info-text: #1967d2;
+  --cros-badge-warning-bg: #fef7e0;
+  --cros-badge-warning-text: #b06000;
+  --cros-badge-danger-bg: #fce8e6;
+  --cros-badge-danger-text: #c5221f;
+}
+
+/* Automatic ChromeOS Dark Mode detection */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cros-primary: #8ab4f8;
+    --cros-primary-hover: #aecbfa;
+    --cros-primary-container: #174ea6;
+    --cros-on-primary: #041e49;
+    --cros-on-primary-container: #d2e3fc;
+
+    --cros-surface: #202124;
+    --cros-surface-container: #292a2d;
+    --cros-surface-container-high: #35363a;
+    --cros-surface-variant: #28292c;
+    --cros-on-surface: #e8eaed;
+    --cros-on-surface-variant: #9aa0a6;
+
+    --cros-outline: #5f6368;
+    --cros-outline-variant: #3c4043;
+    --cros-divider: rgba(232, 234, 237, 0.12);
+
+    --cros-state-hover: rgba(232, 234, 237, 0.06);
+    --cros-state-active: rgba(232, 234, 237, 0.10);
+    --cros-state-focus: rgba(138, 180, 248, 0.24);
+
+    --cros-shadow-1: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --cros-shadow-2: 0 2px 6px 2px rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --cros-shadow-3: 0 4px 12px 4px rgba(0, 0, 0, 0.45);
+
+    --cros-badge-success-bg: rgba(30, 142, 62, 0.25);
+    --cros-badge-success-text: #81c995;
+    --cros-badge-info-bg: rgba(26, 115, 232, 0.25);
+    --cros-badge-info-text: #8ab4f8;
+    --cros-badge-warning-bg: rgba(249, 171, 0, 0.25);
+    --cros-badge-warning-text: #fdd663;
+    --cros-badge-danger-bg: rgba(217, 48, 37, 0.25);
+    --cros-badge-danger-text: #f28b82;
+  }
+}
+
+/* Explicit Dark Mode Override */
+[data-theme="dark"] {
+  --cros-primary: #8ab4f8;
+  --cros-primary-hover: #aecbfa;
+  --cros-primary-container: #174ea6;
+  --cros-on-primary: #041e49;
+  --cros-on-primary-container: #d2e3fc;
+
+  --cros-surface: #202124;
+  --cros-surface-container: #292a2d;
+  --cros-surface-container-high: #35363a;
+  --cros-surface-variant: #28292c;
+  --cros-on-surface: #e8eaed;
+  --cros-on-surface-variant: #9aa0a6;
+
+  --cros-outline: #5f6368;
+  --cros-outline-variant: #3c4043;
+  --cros-divider: rgba(232, 234, 237, 0.12);
+
+  --cros-state-hover: rgba(232, 234, 237, 0.06);
+  --cros-state-active: rgba(232, 234, 237, 0.10);
+  --cros-state-focus: rgba(138, 180, 248, 0.24);
+
+  --cros-shadow-1: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --cros-shadow-2: 0 2px 6px 2px rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --cros-shadow-3: 0 4px 12px 4px rgba(0, 0, 0, 0.45);
+
+  --cros-badge-success-bg: rgba(30, 142, 62, 0.25);
+  --cros-badge-success-text: #81c995;
+  --cros-badge-info-bg: rgba(26, 115, 232, 0.25);
+  --cros-badge-info-text: #8ab4f8;
+  --cros-badge-warning-bg: rgba(249, 171, 0, 0.25);
+  --cros-badge-warning-text: #fdd663;
+  --cros-badge-danger-bg: rgba(217, 48, 37, 0.25);
+  --cros-badge-danger-text: #f28b82;
+}
+
+/* Material You Color Accent Variants */
+/* Teal Accent */
+[data-accent="teal"] {
+  --cros-primary: #00897b;
+  --cros-primary-hover: #00796b;
+  --cros-primary-container: #b2dfdb;
+  --cros-on-primary-container: #004d40;
+}
+[data-theme="dark"][data-accent="teal"],
+:root:not([data-theme="light"])[data-accent="teal"] {
+  @media (prefers-color-scheme: dark) {
+    --cros-primary: #4db6ac;
+    --cros-primary-hover: #80cbc4;
+    --cros-primary-container: #004d40;
+    --cros-on-primary-container: #b2dfdb;
+  }
+}
+
+/* Purple Accent */
+[data-accent="purple"] {
+  --cros-primary: #7c4dff;
+  --cros-primary-hover: #651fff;
+  --cros-primary-container: #ede7f6;
+  --cros-on-primary-container: #311b92;
+}
+[data-theme="dark"][data-accent="purple"],
+:root:not([data-theme="light"])[data-accent="purple"] {
+  @media (prefers-color-scheme: dark) {
+    --cros-primary: #b388ff;
+    --cros-primary-hover: #d1c4e9;
+    --cros-primary-container: #311b92;
+    --cros-on-primary-container: #ede7f6;
+  }
+}
+
+/* Coral / Rose Accent */
+[data-accent="rose"] {
+  --cros-primary: #e53935;
+  --cros-primary-hover: #d32f2f;
+  --cros-primary-container: #ffcdd2;
+  --cros-on-primary-container: #b71c1c;
+}
+[data-theme="dark"][data-accent="rose"],
+:root:not([data-theme="light"])[data-accent="rose"] {
+  @media (prefers-color-scheme: dark) {
+    --cros-primary: #f28b82;
+    --cros-primary-hover: #f6aea9;
+    --cros-primary-container: #8c1d18;
+    --cros-on-primary-container: #fce8e6;
+  }
+}
+
+/* Emerald / Forest Accent */
+[data-accent="emerald"] {
+  --cros-primary: #1e8e3e;
+  --cros-primary-hover: #137333;
+  --cros-primary-container: #ceead6;
+  --cros-on-primary-container: #0d652d;
+}
+[data-theme="dark"][data-accent="emerald"],
+:root:not([data-theme="light"])[data-accent="emerald"] {
+  @media (prefers-color-scheme: dark) {
+    --cros-primary: #81c995;
+    --cros-primary-hover: #a8dab5;
+    --cros-primary-container: #0d652d;
+    --cros-on-primary-container: #ceead6;
+  }
+}
+
+/* Global Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--cros-font-family);
+  background-color: var(--cros-surface);
+  color: var(--cros-on-surface);
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--cros-transition-normal), color var(--cros-transition-normal);
+  user-select: none;
+}

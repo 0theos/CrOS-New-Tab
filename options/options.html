@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Настройки — CrOS Modular Suite</title>
+  <link rel="stylesheet" href="../styles/theme.css">
+  <link rel="stylesheet" href="../styles/shared.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="cros-options-layout">
+    <header class="cros-header-bar">
+      <div class="cros-container cros-header-inner">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="../icons/icon48.png" alt="Icon" width="32" height="32">
+          <div>
+            <h1 class="cros-title-large">CrOS Modular Assistant</h1>
+            <p class="cros-caption">Центр управления модулями и системным стилем ChromeOS</p>
+          </div>
+        </div>
+        <div id="status-chip" class="cros-badge cros-badge-info">Готово</div>
+      </div>
+    </header>
+
+    <main class="cros-container cros-content">
+      <!-- Section 1: System Style & Theme -->
+      <section class="cros-section">
+        <h2 class="cros-title-medium cros-section-title">🎨 Стиль и системная тема</h2>
+        <div class="cros-card">
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Режим оформления</div>
+              <div class="cros-body-medium">Автоматически подстраивается под настройки ChromeOS или фиксирует тему</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="cros-btn cros-btn-outlined theme-btn" data-mode="auto">Авто (ChromeOS)</button>
+              <button class="cros-btn cros-btn-outlined theme-btn" data-mode="light">Светлая</button>
+              <button class="cros-btn cros-btn-outlined theme-btn" data-mode="dark">Темная</button>
+            </div>
+          </div>
+
+          <div class="setting-divider"></div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-title">Цветовой акцент (Material You)</div>
+              <div class="cros-body-medium">Палитра кнопок, переключателей и индикаторов</div>
+            </div>
+            <div id="accent-selector" style="display:flex; gap:8px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Installed Modules -->
+      <section class="cros-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h2 class="cros-title-medium">🧩 Установленные модули интеракции</h2>
+          <span class="cros-caption" id="modules-count">...</span>
+        </div>
+        
+        <div class="cros-card">
+          <div id="modules-list" style="display:flex; flex-direction:column; gap:12px;">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Developer & Custom Modules -->
+      <section class="cros-section">
+        <h2 class="cros-title-medium cros-section-title">⚡ Как добавить свой модуль интеракции</h2>
+        <div class="cros-card" style="display:flex; flex-direction:column; gap:12px;">
+          <p class="cros-body-medium">
+            Расширение спроектировано так, чтобы добавление нового функционала занимало считанные минуты.
+          </p>
+
+          <div class="guide-box">
+            <b>Способ 1: Через код (рекомендуемый для сложных расширений)</b>
+            <ol style="margin-left: 20px; margin-top: 6px; line-height: 1.6;">
+              <li>Создайте файл модуля, например: <code>modules/my-action/index.js</code> по шаблону из <code>modules/template/module-template.js</code>.</li>
+              <li>Импортируйте его в <code>modules/index.js</code> и вызовите <code>registry.register(myAction)</code>.</li>
+              <li>Обновите расширение в <code>chrome://extensions</code>. Модуль сразу появится в меню!</li>
+            </ol>
+          </div>
+
+          <div class="guide-box">
+            <b>Способ 2: Без кода через встроенный «Конструктор модулей»</b>
+            <p style="margin-top: 4px;">
+              Откройте popup или боковую панель, перейдите на вкладку <b>«Конструктор модулей»</b> и вставьте любой JavaScript код для выполнения на странице.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Backup / Export -->
+      <section class="cros-section">
+        <h2 class="cros-title-medium cros-section-title">💾 Резервное копирование и перенос</h2>
+        <div class="cros-card" style="display:flex; gap:12px; align-items:center;">
+          <button class="cros-btn cros-btn-tonal" id="btn-export-data">
+            📥 Экспорт настроек и заметок
+          </button>
+          <label class="cros-btn cros-btn-outlined" style="cursor:pointer;">
+            📤 Импорт из JSON
+            <input type="file" id="import-file-input" accept=".json" style="display:none;">
+          </label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
