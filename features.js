@@ -54,30 +54,93 @@
     setTimeout(() => input.focus(), 50);
   }
 
-  /* ---------- Shortcuts ---------- */
+  /* ---------- Desktop shortcuts (Windows-style icon grid) ---------- */
+  const CELL_W = 96, CELL_H = 108, GRID_LEFT = 8, GRID_TOP = 76;
+  const gridRows = () => Math.max(1, Math.floor((innerHeight - GRID_TOP - 8) / CELL_H));
+  const gridCols = () => Math.max(1, Math.floor((innerWidth - GRID_LEFT) / CELL_W));
+
+  // First free cell, filling column by column from the top-left like Windows
+  function freeCell(ignoreId) {
+    const taken = new Set(state.shortcuts.filter((s) => s.id !== ignoreId && s.col != null).map((s) => s.col + ',' + s.row));
+    const rows = gridRows();
+    for (let col = 0; col < 200; col++) for (let row = 0; row < rows; row++) if (!taken.has(col + ',' + row)) return { col, row };
+    return { col: 0, row: 0 };
+  }
+  const cellTaken = (col, row, id) => state.shortcuts.some((s) => s.id !== id && s.col === col && s.row === row);
+
+  function menu(x, y, items) {
+    document.querySelectorAll('.ctx-menu').forEach((m) => m.remove());
+    const m = el('div', { className: 'ctx-menu' });
+    items.forEach(([label, fn]) => {
+      const b = el('button', { textContent: label });
+      b.onclick = () => { m.remove(); fn(); };
+      m.append(b);
+    });
+    document.body.append(m);
+    m.style.left = Math.min(x, innerWidth - m.offsetWidth - 4) + 'px';
+    m.style.top = Math.min(y, innerHeight - m.offsetHeight - 4) + 'px';
+  }
+
   function renderShortcuts() {
     const box = $('shortcuts');
     box.replaceChildren();
+    const rows = gridRows(), cols = gridCols();
+    let moved = false;
+    state.shortcuts.forEach((s) => {
+      if (s.col == null || s.row >= rows || s.col >= cols) { Object.assign(s, freeCell(s.id)); moved = true; }
+    });
+    if (moved) save();
     state.shortcuts.forEach((s) => {
       const url = safeUrl(s.url);
       if (!url) return;
       const icon = el('div', { className: 'shortcut-icon' });
-      const img = el('img', { alt: '' });
+      const img = el('img', { alt: '', draggable: false });
       img.src = 'https://www.google.com/s2/favicons?sz=64&domain_url=' + encodeURIComponent(url);
       img.onerror = () => icon.replaceChildren(document.createTextNode((s.title || '?')[0].toUpperCase()));
       icon.append(img);
-      const rm = el('button', { className: 'item-remove', textContent: '✕', title: 'Удалить' });
-      rm.addEventListener('click', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        state.shortcuts = state.shortcuts.filter((x) => x.id !== s.id);
-        save(); renderShortcuts();
+      const node = el('div', { className: 'shortcut', tabIndex: 0, title: url }, icon, el('div', { className: 'shortcut-title', textContent: s.title || url }));
+      node.style.left = GRID_LEFT + s.col * CELL_W + 'px';
+      node.style.top = GRID_TOP + s.row * CELL_H + 'px';
+      const open = () => { location.href = url; };
+      node.addEventListener('dblclick', open);
+      node.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+      node.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        document.querySelectorAll('.shortcut.selected').forEach((n) => n.classList.remove('selected'));
+        node.classList.add('selected');
+        const sx = e.clientX, sy = e.clientY, ox = node.offsetLeft, oy = node.offsetTop;
+        let dragging = false;
+        const mv = (ev) => {
+          if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+          dragging = true;
+          node.classList.add('dragging');
+          node.style.left = ox + ev.clientX - sx + 'px';
+          node.style.top = oy + ev.clientY - sy + 'px';
+        };
+        const up = () => {
+          removeEventListener('pointermove', mv);
+          removeEventListener('pointerup', up);
+          if (!dragging) return;
+          node.classList.remove('dragging');
+          const col = Math.min(gridCols() - 1, Math.max(0, Math.round((node.offsetLeft - GRID_LEFT) / CELL_W)));
+          const row = Math.min(gridRows() - 1, Math.max(0, Math.round((node.offsetTop - GRID_TOP) / CELL_H)));
+          if (!cellTaken(col, row, s.id)) { s.col = col; s.row = row; save(); }
+          renderShortcuts();
+        };
+        addEventListener('pointermove', mv);
+        addEventListener('pointerup', up);
       });
-      box.append(el('a', { className: 'shortcut', href: url }, icon, el('div', { className: 'shortcut-title', textContent: s.title || url }), rm));
+      node.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        node.classList.add('selected');
+        menu(e.clientX, e.clientY, [
+          ['Открыть', open],
+          ['Открыть в новой вкладке', () => window.open(url, '_blank')],
+          ['Удалить', () => { state.shortcuts = state.shortcuts.filter((x) => x.id !== s.id); save(); renderShortcuts(); }],
+        ]);
+      });
+      box.append(node);
     });
-    const add = el('button', { className: 'shortcut shortcut-add', title: 'Добавить ярлык' },
-      el('div', { className: 'shortcut-icon', textContent: '+' }), el('div', { className: 'shortcut-title', textContent: 'Добавить' }));
-    add.addEventListener('click', addShortcutDialog);
-    box.append(add);
   }
 
   function dialog(title, fields, onOk) {
@@ -112,7 +175,7 @@
       { name: 'url', label: 'Адрес', placeholder: 'youtube.com', required: true },
     ], (v) => {
       if (!safeUrl(v.url)) return;
-      state.shortcuts.push({ id: uid(), title: v.title, url: normUrl(v.url) });
+      state.shortcuts.push({ id: uid(), title: v.title, url: normUrl(v.url), ...freeCell() });
       save(); renderShortcuts();
     });
   }
@@ -120,21 +183,57 @@
   /* ---------- Widgets ---------- */
   const WIDGET_TYPES = [['note', 'Заметка'], ['todo', 'Список дел'], ['countdown', 'Обратный отсчёт'], ['embed', 'Веб-страница (iframe)']];
   const widgetTimers = [];
+  let zTop = 10;
 
   function renderWidgets() {
     widgetTimers.splice(0).forEach(clearInterval);
     const box = $('widgets');
     box.replaceChildren();
-    state.widgets.forEach((w) => {
-      const body = el('div', { className: 'widget' }, el('div', { className: 'widget-title', textContent: w.title || '' }));
+    state.widgets.forEach((w, i) => {
+      if (w.x == null) { w.x = 140 + (i % 3) * 300; w.y = 90 + Math.floor(i / 3) * 230; }
+      w.w = w.w || 280; w.h = w.h || 200;
       const rm = el('button', { className: 'item-remove', textContent: '✕', title: 'Удалить виджет' });
       rm.addEventListener('click', () => {
         state.widgets = state.widgets.filter((x) => x.id !== w.id);
         save(); renderWidgets();
       });
-      body.append(rm);
-      WIDGET_BUILDERS[w.type]?.(w, body);
-      box.append(body);
+      const head = el('div', { className: 'widget-head' }, el('span', { className: 'widget-title', textContent: w.title || '' }), rm);
+      const content = el('div', { className: 'widget-body' });
+      const node = el('div', { className: 'widget' }, head, content);
+      Object.assign(node.style, { left: Math.max(0, w.x) + 'px', top: Math.max(0, w.y) + 'px', width: w.w + 'px', height: w.h + 'px' });
+      // Drag by header
+      head.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.target === rm) return;
+        node.style.zIndex = ++zTop;
+        const sx = e.clientX, sy = e.clientY, ox = node.offsetLeft, oy = node.offsetTop;
+        head.setPointerCapture(e.pointerId);
+        node.classList.add('dragging');
+        const mv = (ev) => {
+          node.style.left = Math.max(0, Math.min(innerWidth - 60, ox + ev.clientX - sx)) + 'px';
+          node.style.top = Math.max(0, Math.min(innerHeight - 40, oy + ev.clientY - sy)) + 'px';
+        };
+        const up = () => {
+          head.removeEventListener('pointermove', mv);
+          head.removeEventListener('pointerup', up);
+          node.classList.remove('dragging');
+          w.x = node.offsetLeft; w.y = node.offsetTop; save();
+        };
+        head.addEventListener('pointermove', mv);
+        head.addEventListener('pointerup', up);
+      });
+      node.addEventListener('pointerdown', () => { node.style.zIndex = ++zTop; });
+      node.addEventListener('contextmenu', (e) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) { e.stopPropagation(); return; }
+      });
+      // Persist resize (CSS resize handle)
+      let t;
+      new ResizeObserver(() => {
+        if (Math.abs(node.offsetWidth - w.w) < 2 && Math.abs(node.offsetHeight - w.h) < 2) return;
+        clearTimeout(t);
+        t = setTimeout(() => { w.w = node.offsetWidth; w.h = node.offsetHeight; save(); }, 300);
+      }).observe(node);
+      WIDGET_BUILDERS[w.type]?.(w, content);
+      box.append(node);
     });
   }
 
@@ -200,6 +299,7 @@
   /* ---------- Wallpaper ---------- */
   function applyWallpaper() {
     $('wallpaper').style.backgroundImage = state.wallpaper ? `url("${state.wallpaper.replace(/"/g, '%22')}")` : '';
+    document.body.classList.toggle('has-wallpaper', !!state.wallpaper);
     $('wallpaper-dim').style.opacity = state.wallpaper ? state.dim : 0;
   }
 
@@ -271,7 +371,23 @@
     renderWidgets();
     applyWallpaper();
     initSettings();
-    $('widget-add').addEventListener('click', addWidgetDialog);
+    document.addEventListener('contextmenu', (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      menu(e.clientX, e.clientY, [
+        ['Новый ярлык', addShortcutDialog],
+        ['Новый виджет', addWidgetDialog],
+        ['Полный экран', toggleFullscreen],
+        ['Настройки и обои', () => $('settings-toggle').click()],
+      ]);
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (!e.target.closest('.ctx-menu')) document.querySelectorAll('.ctx-menu').forEach((m) => m.remove());
+      if (!e.target.closest('.shortcut')) document.querySelectorAll('.shortcut.selected').forEach((n) => n.classList.remove('selected'));
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.ctx-menu').forEach((m) => m.remove()); });
+    let rt;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderShortcuts, 150); });
     $('fullscreen-toggle').addEventListener('click', toggleFullscreen);
     // Browsers require a user gesture to enter fullscreen
     document.addEventListener('pointerdown', () => {

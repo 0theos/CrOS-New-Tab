@@ -1,74 +1,91 @@
-/* CrOS New Tab 0.2 — wallpaper, search, shortcuts, widgets, fullscreen */
-body { overflow-y: auto; overflow-x: hidden; padding-bottom: 96px; }
-body::-webkit-scrollbar { width: 0; }
+/* CrOS New Tab 0.2 — desktop layout */
+html, body { overflow: hidden; }
+body { display: block; padding: 0; }
 
 #wallpaper, #wallpaper-dim { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 #wallpaper { background-size: cover; background-position: center; background-repeat: no-repeat; }
 #wallpaper-dim { background: #000; opacity: 0; }
 
-/* Search */
-.search-form { width: min(640px, 90vw); margin-top: 28px; position: relative; }
+/* Desktop surface */
+#desktop { position: fixed; inset: 0; z-index: 0; }
+#shortcuts, #widgets { position: absolute; inset: 0; pointer-events: none; }
+#shortcuts > *, #widgets > * { pointer-events: auto; }
+
+/* Compact clock, top right */
+.m3-clock-card { position: fixed; top: 12px; right: 16px; z-index: 5; padding: 8px 20px; border-radius: 20px; }
+.m3-time { font-size: 2.2rem; letter-spacing: -1px; }
+.m3-date { margin-top: 2px; font-size: .8rem; }
+
+/* Search, top center */
+.search-form { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; width: min(520px, 42vw); }
 .search-input {
-  width: 100%; height: 52px; border-radius: 26px; padding: 0 56px 0 52px;
+  width: 100%; height: 44px; border-radius: 22px; padding: 0 48px 0 46px;
   border: 1px solid var(--theme-border); background: var(--theme-surface-high);
-  color: var(--theme-text); font: inherit; font-size: 1rem; outline: none;
+  color: var(--theme-text); font: inherit; font-size: .95rem; outline: none;
   backdrop-filter: blur(12px); user-select: text; transition: border-color .2s, box-shadow .2s;
 }
 .search-input:focus { border-color: var(--theme-accent); box-shadow: 0 0 0 3px var(--theme-ambient); }
 .search-input::placeholder { color: var(--theme-text-subtle); }
-.search-icon { position: absolute; left: 18px; top: 15px; color: var(--theme-text-subtle); pointer-events: none; }
+.search-icon { position: absolute; left: 15px; top: 11px; color: var(--theme-text-subtle); pointer-events: none; }
 .search-hint {
-  position: absolute; right: 16px; top: 14px; width: 24px; height: 24px; border-radius: 6px;
+  position: absolute; right: 14px; top: 11px; width: 22px; height: 22px; border-radius: 6px;
   border: 1px solid var(--theme-border); color: var(--theme-text-subtle);
   font-size: 12px; display: flex; align-items: center; justify-content: center; pointer-events: none;
 }
 
-/* Shortcuts */
-.shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 32px; width: min(760px, 92vw); }
+/* Windows-style desktop icons */
 .shortcut {
-  position: relative; width: 92px; padding: 12px 6px 10px; border-radius: 18px; text-decoration: none;
-  color: var(--theme-text); background: var(--theme-surface); border: 1px solid var(--theme-border);
-  display: flex; flex-direction: column; align-items: center; gap: 8px; backdrop-filter: blur(10px);
-  transition: background-color .15s, transform .15s;
+  position: absolute; width: 88px; height: 100px; padding: 8px 4px; border-radius: 6px;
+  border: 1px solid transparent; color: var(--theme-text); cursor: default; outline: none;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
-.shortcut:hover { background: var(--theme-surface-high); transform: translateY(-2px); }
-.shortcut-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--theme-surface-high);
-  display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 600; }
-.shortcut-icon img { width: 28px; height: 28px; }
-.shortcut-title { font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shortcut-add { cursor: pointer; font: inherit; }
-.shortcut-add .shortcut-icon { font-size: 22px; color: var(--theme-text-subtle); }
-.item-remove {
-  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: none;
-  background: var(--theme-surface-high); color: var(--theme-text); cursor: pointer; font-size: 11px;
-  display: none; align-items: center; justify-content: center;
-}
-.shortcut:hover .item-remove, .widget:hover .item-remove { display: flex; }
+body.has-wallpaper .shortcut { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 2px rgba(0,0,0,.6); }
+.shortcut:hover { background: var(--theme-surface-high); border-color: var(--theme-border); }
+.shortcut.selected, .shortcut:focus-visible { background: rgba(138,180,248,.3); border-color: rgba(138,180,248,.7); }
+.shortcut.dragging { opacity: .75; z-index: 50; transition: none; }
+.shortcut-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--theme-surface-high);
+  backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; overflow: hidden;
+  font-weight: 600; font-size: 20px; text-shadow: none; color: var(--theme-text); }
+.shortcut-icon img { width: 32px; height: 32px; pointer-events: none; }
+.shortcut-title { font-size: 12px; line-height: 1.25; text-align: center; max-width: 100%; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-/* Widgets */
-.widgets { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 32px; width: min(1000px, 94vw); }
+/* Free-floating widgets */
 .widget {
-  position: relative; width: 280px; min-height: 140px; padding: 16px; border-radius: 24px;
-  background: var(--theme-surface); border: 1px solid var(--theme-border); backdrop-filter: blur(12px);
-  display: flex; flex-direction: column; gap: 8px;
+  position: absolute; min-width: 180px; min-height: 100px; border-radius: 16px; overflow: hidden; resize: both;
+  background: var(--theme-surface-high); border: 1px solid var(--theme-border); backdrop-filter: blur(16px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.25); display: flex; flex-direction: column; z-index: 10;
 }
+.widget.dragging { opacity: .85; }
+.widget-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 14px;
+  cursor: grab; touch-action: none; background: var(--theme-surface); }
+.widget-head:active { cursor: grabbing; }
 .widget-title { font-size: 12px; font-weight: 600; letter-spacing: .4px; color: var(--theme-accent); text-transform: uppercase; }
-.widget textarea, .widget input[type=text], .widget input[type=datetime-local] {
+.widget-body { flex: 1; min-height: 0; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.widget textarea, .widget input[type=text] {
   width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--theme-border);
   color: var(--theme-text); font: inherit; font-size: 14px; outline: none; user-select: text; padding: 4px 0;
 }
-.widget textarea { flex: 1; min-height: 90px; resize: vertical; border: none; }
-.widget iframe { width: 100%; height: 200px; border: none; border-radius: 12px; background: #fff; }
+.widget textarea { flex: 1; resize: none; border: none; }
+.widget iframe { flex: 1; width: 100%; border: none; border-radius: 10px; background: #fff; }
 .todo-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .todo-item.done span { text-decoration: line-through; color: var(--theme-text-subtle); }
 .todo-item span { flex: 1; word-break: break-word; }
 .todo-item button { background: none; border: none; color: var(--theme-text-subtle); cursor: pointer; }
 .countdown-value { font-size: 2rem; font-variant-numeric: tabular-nums; }
-.widget-add-btn {
-  align-self: center; margin-top: 32px; padding: 10px 20px; border-radius: 20px; cursor: pointer;
-  border: 1px dashed var(--theme-border); background: transparent; color: var(--theme-text-subtle); font: inherit;
+.item-remove {
+  width: 22px; height: 22px; border-radius: 50%; border: none; background: transparent; color: var(--theme-text-subtle);
+  cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
 }
-.widget-add-btn:hover { color: var(--theme-text); background: var(--theme-surface); }
+.item-remove:hover { background: var(--theme-border); color: var(--theme-text); }
+
+/* Context menu */
+.ctx-menu { position: fixed; z-index: 3000; min-width: 190px; padding: 6px; border-radius: 12px;
+  background: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 0 8px 28px rgba(0,0,0,.4);
+  display: flex; flex-direction: column; }
+.ctx-menu button { text-align: left; padding: 8px 12px; border: none; border-radius: 8px; background: none;
+  color: var(--theme-text); font: inherit; font-size: 13px; cursor: pointer; }
+.ctx-menu button:hover { background: var(--theme-surface-high); }
 
 /* Dialog + settings additions */
 .cros-dialog { border: 1px solid var(--theme-border); border-radius: 24px; padding: 22px; width: 340px;
