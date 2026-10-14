@@ -1,0 +1,7 @@
+# Agent metadata & teamwork artifacts
+.agents/
+*.agents
+
+# Temporary and log files
+*.log
+.DS_Store

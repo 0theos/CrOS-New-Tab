@@ -1,4 +1,4 @@
-/* CrOS New Tab 0.2 — fullscreen, search, shortcuts, widgets, wallpapers */
+/* CrOS New Tab 0.3 — desktop layout, storage v3, shortcuts, modular widgets, wallpapers */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -8,13 +8,185 @@
     get: (keys) => hasChrome
       ? new Promise((r) => chrome.storage.local.get(keys, r))
       : Promise.resolve(Object.fromEntries(keys.map((k) => [k, JSON.parse(localStorage.getItem(k) || 'null')]))),
-    set: (obj) => hasChrome
-      ? new Promise((r) => chrome.storage.local.set(obj, r))
-      : (Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v))), Promise.resolve()),
+    set: (obj) => {
+      try {
+        Object.entries(obj).forEach(([k, v]) => {
+          if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+            localStorage.setItem(k, JSON.stringify(v));
+          }
+        });
+      } catch (_) {}
+      return hasChrome
+        ? new Promise((r) => chrome.storage.local.set(obj, r))
+        : Promise.resolve();
+    },
   };
 
-  const state = { shortcuts: [], widgets: [], wallpaper: null, dim: 0.3, autoFullscreen: false };
-  const save = () => store.set({ cros_v2: state });
+  let isNavigatingAway = false;
+
+  const state = {
+    version: 3,
+    shortcuts: [],
+    widgets: [],
+    wallpaper: { type: 'default', value: '' },
+    dim: 0.3,
+    autoFullscreen: false,
+    closeProtection: true,
+    google: { clientId: '', mockMode: false },
+    weather: { city: 'Moscow', lat: 55.7558, lon: 37.6173, units: 'celsius' }
+  };
+
+  /**
+   * Migrate storage from cros_v2 to cros_v3 adhering to PROJECT.md §1 & test specs.
+   * Idempotent: if cros_v3 with version=3 exists, returns it intact.
+   */
+  function migrateStorage(data) {
+    const existingV3 = data && data.cros_v3;
+    if (existingV3 && typeof existingV3 === 'object' && existingV3.version === 3) {
+      if (!Array.isArray(existingV3.shortcuts)) existingV3.shortcuts = [];
+      if (!Array.isArray(existingV3.widgets)) existingV3.widgets = [];
+      if (!existingV3.wallpaper || typeof existingV3.wallpaper !== 'object') {
+        if (typeof existingV3.wallpaper === 'string' && existingV3.wallpaper) {
+          existingV3.wallpaper = {
+            type: existingV3.wallpaper.startsWith('data:') ? 'image' : 'url',
+            value: existingV3.wallpaper
+          };
+        } else {
+          existingV3.wallpaper = { type: 'default', value: '' };
+        }
+      }
+      if (typeof existingV3.dim !== 'number') existingV3.dim = 0.3;
+      if (typeof existingV3.autoFullscreen !== 'boolean') existingV3.autoFullscreen = false;
+      if (existingV3.closeProtection === undefined) existingV3.closeProtection = true;
+      if (!existingV3.google || typeof existingV3.google !== 'object') {
+        existingV3.google = { clientId: '', mockMode: false };
+      }
+      if (!existingV3.weather || typeof existingV3.weather !== 'object') {
+        existingV3.weather = { city: 'Moscow', lat: 55.7558, lon: 37.6173, units: 'celsius' };
+      }
+      return existingV3;
+    }
+
+    const v2 = (data && data.cros_v2 && typeof data.cros_v2 === 'object') ? data.cros_v2 : {};
+
+    const defaultWidgets = [
+      {
+        id: 'clock-1',
+        type: 'clock',
+        title: 'Clock',
+        x: 20,
+        y: 20,
+        w: 280,
+        h: 140,
+        enabled: true,
+        config: { format24h: true, showSeconds: false }
+      },
+      {
+        id: 'weather-1',
+        type: 'weather',
+        title: 'Weather',
+        x: 320,
+        y: 20,
+        w: 300,
+        h: 180,
+        enabled: true,
+        config: {}
+      }
+    ];
+
+    let migratedWidgets = [];
+    if (Array.isArray(v2.widgets) && v2.widgets.length > 0) {
+      migratedWidgets = v2.widgets.map((w) => {
+        const copy = Object.assign({}, w);
+        if (copy.enabled === undefined) copy.enabled = true;
+        if (!copy.config) copy.config = {};
+        return copy;
+      });
+    } else {
+      migratedWidgets = defaultWidgets;
+    }
+
+    let shortcuts = v2.shortcuts;
+    if (!Array.isArray(shortcuts)) {
+      shortcuts = [
+        { id: 'sc-google', title: 'Google', url: 'https://www.google.com', icon: '🌐' },
+        { id: 'sc-youtube', title: 'YouTube', url: 'https://www.youtube.com', icon: '▶️' }
+      ];
+    }
+
+    let wallpaper = v2.wallpaper;
+    if (!wallpaper || typeof wallpaper !== 'object' || !wallpaper.type) {
+      if (typeof wallpaper === 'string' && wallpaper) {
+        wallpaper = {
+          type: wallpaper.startsWith('data:') ? 'image' : 'url',
+          value: wallpaper
+        };
+      } else {
+        wallpaper = { type: 'default', value: '' };
+      }
+    }
+
+    let dim = 0.0;
+    if (v2.dim != null) {
+      try {
+        dim = parseFloat(v2.dim);
+        if (isNaN(dim)) dim = 0.0;
+        dim = Math.max(0.0, Math.min(1.0, dim));
+      } catch (_) {
+        dim = 0.0;
+      }
+    }
+
+    const autoFullscreen = Boolean(v2.autoFullscreen);
+    let closeProtection = true;
+    if (v2.closeProtection !== undefined) {
+      closeProtection = Boolean(v2.closeProtection);
+    } else if (v2.antiClose !== undefined) {
+      closeProtection = Boolean(v2.antiClose);
+    }
+
+    return {
+      version: 3,
+      shortcuts,
+      widgets: migratedWidgets,
+      wallpaper,
+      dim,
+      autoFullscreen,
+      closeProtection,
+      google: {
+        clientId: '',
+        mockMode: false
+      },
+      weather: {
+        city: 'Moscow',
+        lat: 55.7558,
+        lon: 37.6173,
+        units: 'celsius'
+      }
+    };
+  }
+
+  const save = () => {
+    let v2Wallpaper = null;
+    if (state.wallpaper) {
+      if (typeof state.wallpaper === 'string') {
+        v2Wallpaper = state.wallpaper;
+      } else if (state.wallpaper.type === 'color' || state.wallpaper.type === 'image' || state.wallpaper.type === 'url') {
+        v2Wallpaper = state.wallpaper.value;
+      }
+    }
+
+    const v2State = {
+      shortcuts: state.shortcuts,
+      widgets: state.widgets,
+      wallpaper: v2Wallpaper,
+      dim: state.dim,
+      autoFullscreen: state.autoFullscreen,
+      closeProtection: state.closeProtection
+    };
+
+    return store.set({ cros_v3: state, cros_v2: v2State });
+  };
 
   const el = (tag, props = {}, ...kids) => {
     const n = Object.assign(document.createElement(tag), props);
@@ -39,7 +211,17 @@
   function openLink(url, s) {
     if (s && s.type === 'app' && chrome.management && chrome.management.launchApp) { chrome.management.launchApp(s.appId); return; }
     const scheme = new URL(url).protocol;
-    if (scheme === 'http:' || scheme === 'https:') { location.href = url; return; }
+    if (scheme === 'http:' || scheme === 'https:') {
+      if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
+        window.__crosNavigate(url);
+      } else {
+        if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
+          window.__crosAllowNavigation();
+        }
+        location.href = url;
+      }
+      return;
+    }
     // file:// and chrome:// are not navigable from a page, but the tabs API can open them
     if ((scheme === 'file:' || scheme === 'chrome:') && chrome.tabs) { chrome.tabs.create({ url }); return; }
     // Custom protocol: let the browser hand it to the registered app, without leaving this page
@@ -62,9 +244,28 @@
       const q = input.value.trim();
       if (!q) return;
       const direct = /^(https?:\/\/|[\w-]+(\.[\w-]+)+(\/|$))/i.test(q) && !/\s/.test(q);
-      if (direct) { location.href = normUrl(q); }
+      const targetUrl = direct ? normUrl(q) : 'https://www.google.com/search?q=' + encodeURIComponent(q);
+      if (direct) {
+        if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
+          window.__crosNavigate(targetUrl);
+        } else {
+          if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
+            window.__crosAllowNavigation();
+          }
+          location.href = targetUrl;
+        }
+      }
       else if (chrome.search && chrome.search.query) chrome.search.query({ text: q, disposition: 'CURRENT_TAB' });
-      else location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+      else {
+        if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
+          window.__crosNavigate(targetUrl);
+        } else {
+          if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
+            window.__crosAllowNavigation();
+          }
+          location.href = targetUrl;
+        }
+      }
     });
     // Quick access: type anywhere, or "/" to focus
     document.addEventListener('keydown', (e) => {
@@ -226,127 +427,144 @@
     });
   }
 
-  /* ---------- Widgets ---------- */
-  const WIDGET_TYPES = [['note', 'Заметка'], ['todo', 'Список дел'], ['countdown', 'Обратный отсчёт'], ['embed', 'Веб-страница (iframe)']];
-  const widgetTimers = [];
-  let zTop = 10;
-
+  /* ---------- Widgets System Integration ---------- */
   function renderWidgets() {
-    widgetTimers.splice(0).forEach(clearInterval);
-    const box = $('widgets');
-    box.replaceChildren();
-    state.widgets.forEach((w, i) => {
-      if (w.x == null) { w.x = 140 + (i % 3) * 300; w.y = 90 + Math.floor(i / 3) * 230; }
-      w.w = w.w || 280; w.h = w.h || 200;
-      const rm = el('button', { className: 'item-remove', textContent: '✕', title: 'Удалить виджет' });
-      rm.addEventListener('click', () => {
-        state.widgets = state.widgets.filter((x) => x.id !== w.id);
-        save(); renderWidgets();
-      });
-      const head = el('div', { className: 'widget-head' }, el('span', { className: 'widget-title', textContent: w.title || '' }), rm);
-      const content = el('div', { className: 'widget-body' });
-      const node = el('div', { className: 'widget' }, head, content);
-      Object.assign(node.style, { left: Math.max(0, w.x) + 'px', top: Math.max(0, w.y) + 'px', width: w.w + 'px', height: w.h + 'px' });
-      // Drag by header
-      head.addEventListener('pointerdown', (e) => {
-        if (e.button !== 0 || e.target === rm) return;
-        node.style.zIndex = ++zTop;
-        const sx = e.clientX, sy = e.clientY, ox = node.offsetLeft, oy = node.offsetTop;
-        head.setPointerCapture(e.pointerId);
-        node.classList.add('dragging');
-        const mv = (ev) => {
-          node.style.left = Math.max(0, Math.min(innerWidth - 60, ox + ev.clientX - sx)) + 'px';
-          node.style.top = Math.max(0, Math.min(innerHeight - 40, oy + ev.clientY - sy)) + 'px';
-        };
-        const up = () => {
-          head.removeEventListener('pointermove', mv);
-          head.removeEventListener('pointerup', up);
-          node.classList.remove('dragging');
-          w.x = node.offsetLeft; w.y = node.offsetTop; save();
-        };
-        head.addEventListener('pointermove', mv);
-        head.addEventListener('pointerup', up);
-      });
-      node.addEventListener('pointerdown', () => { node.style.zIndex = ++zTop; });
-      node.addEventListener('contextmenu', (e) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) { e.stopPropagation(); return; }
-      });
-      // Persist resize (CSS resize handle)
-      let t;
-      new ResizeObserver(() => {
-        if (Math.abs(node.offsetWidth - w.w) < 2 && Math.abs(node.offsetHeight - w.h) < 2) return;
-        clearTimeout(t);
-        t = setTimeout(() => { w.w = node.offsetWidth; w.h = node.offsetHeight; save(); }, 300);
-      }).observe(node);
-      WIDGET_BUILDERS[w.type]?.(w, content);
-      box.append(node);
-    });
+    if (window.CrosWidgets) {
+      window.CrosWidgets.render();
+    }
+    renderWidgetsManagerList();
   }
 
-  const WIDGET_BUILDERS = {
-    note(w, body) {
-      const ta = el('textarea', { value: w.text || '', placeholder: 'Текст заметки…' });
-      ta.addEventListener('input', () => { w.text = ta.value; save(); });
-      body.append(ta);
-    },
-    todo(w, body) {
-      w.items = w.items || [];
-      const list = el('div');
-      const draw = () => {
-        list.replaceChildren();
-        w.items.forEach((it, i) => {
-          const cb = el('input', { type: 'checkbox', checked: !!it.done });
-          cb.onchange = () => { it.done = cb.checked; save(); draw(); };
-          const del = el('button', { textContent: '✕' });
-          del.onclick = () => { w.items.splice(i, 1); save(); draw(); };
-          list.append(el('div', { className: 'todo-item' + (it.done ? ' done' : '') }, cb, el('span', { textContent: it.text }), del));
-        });
-      };
-      const inp = el('input', { type: 'text', placeholder: 'Новая задача, Enter' });
-      inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && inp.value.trim()) { w.items.push({ text: inp.value.trim(), done: false }); inp.value = ''; save(); draw(); }
-      });
-      draw();
-      body.append(list, inp);
-    },
-    countdown(w, body) {
-      const out = el('div', { className: 'countdown-value' });
-      const tick = () => {
-        const d = new Date(w.date).getTime() - Date.now();
-        if (isNaN(d)) { out.textContent = '—'; return; }
-        if (d <= 0) { out.textContent = 'Наступило!'; return; }
-        const days = Math.floor(d / 864e5), h = Math.floor(d / 36e5) % 24, m = Math.floor(d / 6e4) % 60;
-        out.textContent = `${days}д ${h}ч ${m}м`;
-      };
-      tick();
-      widgetTimers.push(setInterval(tick, 30000));
-      body.append(out);
-    },
-    embed(w, body) {
-      const url = safeUrl(w.url || '');
-      if (url) body.append(el('iframe', { src: url, referrerPolicy: 'no-referrer', sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups' }));
-    },
-  };
+  function addWidgetCatalogDialog() {
+    if (!window.CrosWidgets) return;
+    const catalog = window.CrosWidgets.getCatalog();
+    const dlg = el('dialog', { className: 'cros-dialog catalog-dialog' },
+      el('h3', { textContent: 'Каталог виджетов' }),
+      el('div', { className: 'section-desc', textContent: 'Выберите виджет для добавления на рабочий стол:' })
+    );
 
-  function addWidgetDialog() {
-    dialog('Новый виджет', [
-      { name: 'type', label: 'Тип', options: WIDGET_TYPES },
-      { name: 'title', label: 'Заголовок', placeholder: 'Мой виджет' },
-      { name: 'extra', label: 'Для отсчёта — дата и время (ГГГГ-ММ-ДД ЧЧ:ММ); для iframe — адрес', placeholder: '2026-12-31 20:00 или example.com' },
-    ], (v) => {
-      const w = { id: uid(), type: v.type, title: v.title };
-      if (v.type === 'countdown') w.date = v.extra.replace(' ', 'T');
-      if (v.type === 'embed') { if (!safeUrl(v.extra)) return; w.url = normUrl(v.extra); }
-      state.widgets.push(w);
-      save(); renderWidgets();
+    const grid = el('div', { className: 'widget-catalog-grid' });
+    catalog.forEach((item) => {
+      const card = el('button', { type: 'button', className: 'widget-catalog-card' },
+        el('span', { className: 'widget-catalog-icon', textContent: item.icon }),
+        el('span', { className: 'widget-catalog-title', textContent: item.title }),
+        el('span', { className: 'widget-catalog-desc', textContent: item.description })
+      );
+
+      card.onclick = () => {
+        dlg.close();
+        if (item.type === 'countdown') {
+          dialog('Настройка таймера', [
+            { name: 'title', label: 'Название события', placeholder: 'Новый год' },
+            { name: 'date', label: 'Дата и время (ГГГГ-ММ-ДД ЧЧ:ММ)', placeholder: '2026-12-31 20:00', required: true }
+          ], (v) => {
+            const dt = (v.date || '').replace(' ', 'T');
+            window.CrosWidgets.addWidget('countdown', v.title || 'Обратный отсчёт', { date: dt });
+            save();
+            renderWidgetsManagerList();
+          });
+        } else if (item.type === 'embed') {
+          dialog('Веб-страница (iframe)', [
+            { name: 'title', label: 'Заголовок', placeholder: 'Веб-фрейм' },
+            { name: 'url', label: 'URL веб-страницы (https://)', placeholder: 'https://example.com', required: true }
+          ], (v) => {
+            const u = safeUrl(v.url);
+            if (!u) return;
+            window.CrosWidgets.addWidget('embed', v.title || 'Веб-страница', { url: u });
+            save();
+            renderWidgetsManagerList();
+          });
+        } else {
+          window.CrosWidgets.addWidget(item.type, item.title);
+          save();
+          renderWidgetsManagerList();
+        }
+      };
+
+      grid.append(card);
+    });
+
+    const closeBtn = el('button', { type: 'button', className: 'btn', textContent: 'Закрыть' });
+    closeBtn.onclick = () => dlg.close();
+    const actions = el('div', { className: 'dialog-actions' }, closeBtn);
+
+    dlg.append(grid, actions);
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    dlg.showModal();
+  }
+
+  function renderWidgetsManagerList() {
+    const listEl = $('widget-manager-list');
+    if (!listEl) return;
+    listEl.replaceChildren();
+
+    if (!state.widgets || !state.widgets.length) {
+      listEl.append(el('div', { className: 'section-desc', textContent: 'Нет активных виджетов. Нажмите «+ Добавить».' }));
+      return;
+    }
+
+    state.widgets.forEach((w) => {
+      const isEnabled = w.enabled !== false;
+      const cb = el('input', { type: 'checkbox', checked: isEnabled, title: 'Включить / скрыть виджет' });
+      cb.onchange = () => {
+        if (window.CrosWidgets) {
+          window.CrosWidgets.toggleWidget(w.id, cb.checked);
+        } else {
+          w.enabled = cb.checked;
+          save();
+        }
+      };
+
+      const titleSpan = el('span', { className: 'widget-manager-title', textContent: w.title || w.type });
+      const badge = el('span', { className: 'widget-manager-badge', textContent: w.type });
+      const info = el('div', { className: 'widget-manager-info' }, cb, titleSpan, badge);
+
+      const delBtn = el('button', { className: 'widget-manager-del', textContent: '✕', title: 'Удалить виджет' });
+      delBtn.onclick = () => {
+        if (window.CrosWidgets) {
+          window.CrosWidgets.removeWidget(w.id);
+        } else {
+          state.widgets = state.widgets.filter((x) => x.id !== w.id);
+          save();
+          renderWidgets();
+        }
+        renderWidgetsManagerList();
+      };
+
+      const item = el('div', { className: 'widget-manager-item' }, info, delBtn);
+      listEl.append(item);
     });
   }
 
   /* ---------- Wallpaper ---------- */
   function applyWallpaper() {
-    $('wallpaper').style.backgroundImage = state.wallpaper ? `url("${state.wallpaper.replace(/"/g, '%22')}")` : '';
-    document.body.classList.toggle('has-wallpaper', !!state.wallpaper);
-    $('wallpaper-dim').style.opacity = state.wallpaper ? state.dim : 0;
+    const wp = state.wallpaper;
+    const wpEl = $('wallpaper');
+    const dimEl = $('wallpaper-dim');
+    if (!wpEl || !dimEl) return;
+
+    let hasWp = false;
+    let bgImg = '';
+    let bgColor = '';
+
+    if (typeof wp === 'string' && wp) {
+      bgImg = `url("${wp.replace(/"/g, '%22')}")`;
+      hasWp = true;
+    } else if (wp && typeof wp === 'object') {
+      if (wp.type === 'color' && wp.value) {
+        bgColor = wp.value;
+        hasWp = true;
+      } else if ((wp.type === 'image' || wp.type === 'url') && wp.value) {
+        bgImg = `url("${wp.value.replace(/"/g, '%22')}")`;
+        hasWp = true;
+      }
+    }
+
+    wpEl.style.backgroundImage = bgImg;
+    wpEl.style.backgroundColor = bgColor;
+    document.body.classList.toggle('has-wallpaper', hasWp);
+    dimEl.style.opacity = hasWp ? (typeof state.dim === 'number' ? state.dim : 0.3) : 0;
   }
 
   function fileToWallpaper(file) {
@@ -368,79 +586,425 @@
 
   /* ---------- Settings panel additions ---------- */
   function initSettings() {
-    const panel = $('settings-panel');
-    const fileInput = el('input', { type: 'file', accept: 'image/*', hidden: true });
-    fileInput.addEventListener('change', async () => {
-      if (!fileInput.files[0]) return;
-      try { state.wallpaper = await fileToWallpaper(fileInput.files[0]); save(); applyWallpaper(); } catch { /* ignore */ }
-      fileInput.value = '';
-    });
-    const upload = el('button', { className: 'btn', textContent: 'Загрузить файл' });
-    upload.onclick = () => fileInput.click();
-    const byUrl = el('button', { className: 'btn', textContent: 'По ссылке' });
-    byUrl.onclick = () => dialog('Обои по ссылке', [{ name: 'url', label: 'URL изображения', required: true }], (v) => {
-      const u = safeUrl(v.url);
-      if (u) { state.wallpaper = u; save(); applyWallpaper(); }
-    });
-    const reset = el('button', { className: 'btn', textContent: 'Сбросить' });
-    reset.onclick = () => { state.wallpaper = null; save(); applyWallpaper(); };
-    const dim = el('input', { type: 'range', className: 'cros-range', min: 0, max: 0.85, step: 0.05, value: state.dim });
-    dim.oninput = () => { state.dim = +dim.value; applyWallpaper(); };
-    dim.onchange = save;
+    // 1. Settings Tab Navigation
+    const tabBtns = document.querySelectorAll('.settings-tab-btn');
+    const tabPanes = document.querySelectorAll('.settings-tab-pane');
 
-    const autoFs = el('input', { type: 'checkbox', checked: state.autoFullscreen });
-    autoFs.onchange = () => { state.autoFullscreen = autoFs.checked; save(); };
-    const fsBtn = el('button', { className: 'btn', textContent: 'Во весь экран (F11)' });
-    fsBtn.onclick = toggleFullscreen;
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-tab');
+        tabBtns.forEach((b) => b.classList.toggle('active', b === btn));
+        tabPanes.forEach((pane) => {
+          const matches = pane.id === `tab-pane-${target}`;
+          pane.classList.toggle('active', matches);
+          pane.style.display = matches ? 'block' : 'none';
+        });
+        if (target === 'widgets') {
+          renderWidgetsManagerList();
+        }
+        if (target === 'google') {
+          renderGoogleSettings();
+        }
+      });
+    });
 
-    const addSc = el('button', { className: 'btn', textContent: '+ Ярлык' });
-    addSc.onclick = addShortcutDialog;
-    const addApp = el('button', { className: 'btn', textContent: '+ Приложение' });
-    addApp.onclick = addAppDialog;
-    const addW = el('button', { className: 'btn', textContent: '+ Виджет' });
-    addW.onclick = addWidgetDialog;
+    // 2. Widgets tab catalog button
+    const addWidgetBtn = $('btn-add-widget-catalog');
+    if (addWidgetBtn) {
+      addWidgetBtn.onclick = addWidgetCatalogDialog;
+    }
+
+    // 3. Mount Wallpaper Controls in Appearance Tab
+    const wpMount = $('wallpaper-settings-mount');
+    if (wpMount) {
+      wpMount.replaceChildren();
+      const fileInput = el('input', { type: 'file', accept: 'image/*', hidden: true });
+      fileInput.addEventListener('change', async () => {
+        if (!fileInput.files[0]) return;
+        try {
+          const dataUrl = await fileToWallpaper(fileInput.files[0]);
+          state.wallpaper = { type: 'image', value: dataUrl };
+          save();
+          applyWallpaper();
+        } catch (_) {}
+        fileInput.value = '';
+      });
+
+      const upload = el('button', { className: 'btn', textContent: 'Загрузить файл' });
+      upload.onclick = () => fileInput.click();
+
+      const byUrl = el('button', { className: 'btn', textContent: 'По ссылке' });
+      byUrl.onclick = () => dialog('Обои по ссылке', [{ name: 'url', label: 'URL изображения', required: true }], (v) => {
+        const u = safeUrl(v.url);
+        if (u) {
+          state.wallpaper = { type: 'url', value: u };
+          save();
+          applyWallpaper();
+        }
+      });
+
+      const reset = el('button', { className: 'btn', textContent: 'Сбросить' });
+      reset.onclick = () => {
+        state.wallpaper = { type: 'default', value: '' };
+        save();
+        applyWallpaper();
+      };
+
+      const dim = el('input', {
+        type: 'range',
+        className: 'cros-range',
+        min: 0,
+        max: 0.85,
+        step: 0.05,
+        value: typeof state.dim === 'number' ? state.dim : 0.3
+      });
+      dim.oninput = () => {
+        state.dim = +dim.value;
+        applyWallpaper();
+      };
+      dim.onchange = save;
+
+      const sec = (title, ...kids) => el('div', { className: 'settings-section settings-extra' },
+        el('div', { className: 'section-label', textContent: title }), ...kids);
+
+      wpMount.append(
+        sec('Обои рабочего стола',
+          el('div', { className: 'btn-row' }, upload, byUrl, reset),
+          el('div', { className: 'section-desc', textContent: 'Затемнение' }),
+          dim,
+          fileInput
+        )
+      );
+    }
+
+    // 4. Mount Protection & Desktop Behavior Controls
+    const protMount = $('protection-settings-mount');
+    if (protMount) {
+      protMount.replaceChildren();
+
+      // Anti-close protection toggle (synchronized with cros_v3.closeProtection)
+      const protCb = el('input', { type: 'checkbox', checked: state.closeProtection !== false });
+      protCb.onchange = () => {
+        state.closeProtection = protCb.checked;
+        save();
+      };
+
+      // Fullscreen controls
+      const autoFs = el('input', { type: 'checkbox', checked: !!state.autoFullscreen });
+      autoFs.onchange = () => {
+        state.autoFullscreen = autoFs.checked;
+        save();
+      };
+      const fsBtn = el('button', { className: 'btn', textContent: 'Во весь экран (F11)' });
+      fsBtn.onclick = toggleFullscreen;
+
+      // Desktop shortcuts management
+      const addSc = el('button', { className: 'btn', textContent: '+ Ярлык' });
+      addSc.onclick = addShortcutDialog;
+      const addApp = el('button', { className: 'btn', textContent: '+ Приложение Chrome' });
+      addApp.onclick = addAppDialog;
+
+      const sec = (title, ...kids) => el('div', { className: 'settings-section settings-extra' },
+        el('div', { className: 'section-label', textContent: title }), ...kids);
+
+      protMount.append(
+        sec('Защита от закрытия (R4)',
+          el('label', { className: 'settings-check' }, protCb,
+            el('div', {},
+              el('strong', { textContent: 'Защита рабочего стола' }),
+              el('div', { className: 'section-desc', textContent: 'Предотвращает случайное закрытие вкладки и восстанавливает рабочий стол' })
+            )
+          )
+        ),
+        sec('Полноэкранный режим',
+          el('div', { className: 'btn-row' }, fsBtn),
+          el('label', { className: 'settings-check' }, autoFs, document.createTextNode('Входить в полный экран по первому клику'))
+        ),
+        sec('Ярлыки рабочего стола',
+          el('div', { className: 'btn-row' }, addSc, addApp)
+        )
+      );
+    }
+
+    // 5. Mount Google Settings Tab (R2 Integration)
+    renderGoogleSettings();
+  }
+
+  function renderGoogleSettings() {
+    const mount = $('google-settings-mount');
+    if (!mount) return;
+    mount.replaceChildren();
+
+    state.google = state.google || { clientId: '', mockMode: false };
 
     const sec = (title, ...kids) => el('div', { className: 'settings-section settings-extra' },
       el('div', { className: 'section-label', textContent: title }), ...kids);
-    panel.append(
-      sec('Обои', el('div', { className: 'btn-row' }, upload, byUrl, reset), el('div', { className: 'section-desc', textContent: 'Затемнение' }), dim, fileInput),
-      sec('Полноэкранный режим', el('div', { className: 'btn-row' }, fsBtn),
-        el('label', { className: 'settings-check' }, autoFs, document.createTextNode('Входить в полный экран по первому клику'))),
-      sec('Содержимое', el('div', { className: 'btn-row' }, addSc, addApp, addW)),
+
+    // 1. Client ID input & save button
+    const clientIdInput = el('input', {
+      type: 'text',
+      className: 'cros-input google-input-client-id',
+      placeholder: 'xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com',
+      value: state.google.clientId || ''
+    });
+
+    const saveStatus = el('span', { className: 'google-save-status', textContent: '' });
+
+    const saveBtn = el('button', {
+      className: 'btn btn-primary',
+      textContent: 'Сохранить',
+      onclick: async () => {
+        const val = clientIdInput.value.trim();
+        state.google.clientId = val;
+        if (window.GoogleService) {
+          window.GoogleService.configure({ clientId: val });
+        }
+        await save();
+        saveStatus.textContent = 'Сохранено ✓';
+        setTimeout(() => { saveStatus.textContent = ''; }, 2500);
+        renderGoogleSettings();
+        if (window.CrosWidgets) window.CrosWidgets.render();
+      }
+    });
+
+    const inputRow = el('div', { className: 'google-input-row' }, clientIdInput, saveBtn);
+
+    // 2. Authentication Status & Login/Logout
+    const authStatusBadge = el('div', { className: 'google-auth-status-badge' });
+    const authActionBtn = el('button', { className: 'btn' });
+    const authMessage = el('div', { className: 'google-auth-message' });
+
+    const updateAuthDisplay = async () => {
+      const isMock = !!state.google.mockMode;
+      const isAuth = window.GoogleService ? await window.GoogleService.isAuthenticated() : false;
+      const hasClientId = Boolean(state.google.clientId);
+
+      if (isMock) {
+        authStatusBadge.className = 'google-status-pill pill-mock';
+        authStatusBadge.textContent = '🟡 Демо-режим (Mock data)';
+        authActionBtn.style.display = 'none';
+        authMessage.textContent = 'Виджеты отображают демонстрационные данные без Google Cloud аккаунта.';
+      } else if (isAuth) {
+        authStatusBadge.className = 'google-status-pill pill-online';
+        authStatusBadge.textContent = '🟢 Подключено к Google';
+        authActionBtn.style.display = 'inline-block';
+        authActionBtn.textContent = 'Выйти';
+        authActionBtn.className = 'btn btn-danger';
+        authActionBtn.onclick = async () => {
+          if (window.GoogleService) await window.GoogleService.logout();
+          await updateAuthDisplay();
+          if (window.CrosWidgets) window.CrosWidgets.render();
+        };
+        authMessage.textContent = 'Сессия активна. События календаря, почта и диск синхронизируются.';
+      } else if (!hasClientId) {
+        authStatusBadge.className = 'google-status-pill pill-offline';
+        authStatusBadge.textContent = '⚪ Client ID не настроен';
+        authActionBtn.style.display = 'none';
+        authMessage.textContent = 'Введите ваш OAuth Client ID ниже или включите тестовый демо-режим.';
+      } else {
+        authStatusBadge.className = 'google-status-pill pill-offline';
+        authStatusBadge.textContent = '⚪ Не авторизован';
+        authActionBtn.style.display = 'inline-block';
+        authActionBtn.textContent = 'Войти через Google';
+        authActionBtn.className = 'btn btn-primary';
+        authActionBtn.onclick = async () => {
+          try {
+            authActionBtn.disabled = true;
+            authActionBtn.textContent = 'Авторизация…';
+            if (window.GoogleService) {
+              await window.GoogleService.login();
+            }
+            await updateAuthDisplay();
+            if (window.CrosWidgets) window.CrosWidgets.render();
+          } catch (e) {
+            authMessage.textContent = 'Ошибка авторизации: ' + e.message;
+          } finally {
+            authActionBtn.disabled = false;
+          }
+        };
+        authMessage.textContent = 'Нажмите для интерактивного входа через Google OAuth.';
+      }
+    };
+    updateAuthDisplay();
+
+    // 3. Mock Mode Toggle
+    const mockCb = el('input', { type: 'checkbox', checked: !!state.google.mockMode });
+    mockCb.onchange = async () => {
+      state.google.mockMode = mockCb.checked;
+      if (window.GoogleService) {
+        window.GoogleService.configure({ mockMode: mockCb.checked });
+      }
+      await save();
+      await updateAuthDisplay();
+      if (window.CrosWidgets) window.CrosWidgets.render();
+    };
+
+    // 4. Redirect URI with Copy Button
+    const redirectUrl = (window.GoogleService && window.GoogleService.getRedirectUrl())
+      || (typeof chrome !== 'undefined' && chrome.identity && chrome.identity.getRedirectURL ? chrome.identity.getRedirectURL() : 'https://extension-id.chromiumapp.org/');
+
+    const redirectCode = el('code', { className: 'google-redirect-code', textContent: redirectUrl });
+    const copyBtn = el('button', {
+      className: 'btn btn-sm',
+      textContent: 'Копировать',
+      onclick: () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(redirectUrl).then(() => {
+            copyBtn.textContent = 'Скопировано!';
+            setTimeout(() => { copyBtn.textContent = 'Копировать'; }, 2000);
+          }).catch(() => {
+            copyBtn.textContent = 'Ошибка';
+          });
+        } else {
+          copyBtn.textContent = 'Скопировано';
+        }
+      }
+    });
+
+    const redirectBox = el('div', { className: 'google-redirect-box' }, redirectCode, copyBtn);
+
+    // 5. Setup instructions
+    const instructions = el('div', { className: 'google-instructions' },
+      el('ol', {},
+        el('li', {}, 'Откройте Google Cloud Console: console.cloud.google.com'),
+        el('li', {}, 'Создайте проект и включите: Calendar API, Gmail API, Drive API.'),
+        el('li', {}, 'В разделе «Экран согласия OAuth» выберите «Внешний», укажите контактный email и добавьте свой аккаунт в «Тестовые пользователи».'),
+        el('li', {}, 'В «Учетные данные» -> «Создать» -> «Идентификатор клиента OAuth» выберите «Веб-приложение».'),
+        el('li', {}, 'В «Разрешенные URL-адреса перенаправления» добавьте адрес:'),
+        redirectBox,
+        el('li', {}, 'Скопируйте Client ID, вставьте в поле выше и нажмите «Сохранить».')
+      )
+    );
+
+    // 6. Ecosystem shortcuts helper
+    const addShortcutsBtn = el('button', {
+      className: 'btn',
+      textContent: '+ Добавить ярлыки Google на рабочий стол',
+      onclick: async () => {
+        if (!window.GoogleService) return;
+        const shortcutsCatalog = window.GoogleService.getGoogleShortcuts();
+        let addedCount = 0;
+        shortcutsCatalog.forEach((sc) => {
+          if (!state.shortcuts.some((s) => s.url === sc.url)) {
+            state.shortcuts.push(sc);
+            addedCount++;
+          }
+        });
+        if (addedCount > 0) {
+          await save();
+          renderShortcuts();
+        }
+        addShortcutsBtn.textContent = `Добавлено ${addedCount} ярлыков ✓`;
+        setTimeout(() => { addShortcutsBtn.textContent = '+ Добавить ярлыки Google на рабочий стол'; }, 2500);
+      }
+    });
+
+    mount.append(
+      sec('Учетная запись Google',
+        el('div', { className: 'google-status-row' }, authStatusBadge, authActionBtn),
+        authMessage
+      ),
+      sec('OAuth Client ID',
+        el('div', { className: 'section-desc', textContent: 'Идентификатор клиента веб-приложения из Google Cloud Console' }),
+        inputRow,
+        saveStatus
+      ),
+      sec('Тестовый режим (Mock data)',
+        el('label', { className: 'settings-check' }, mockCb,
+          el('div', {},
+            el('strong', { textContent: 'Включить демо-режим (Mock data)' }),
+            el('div', { className: 'section-desc', textContent: 'Полноценный просмотр виджетов Календаря, Gmail и Диска без учетной записи Cloud' })
+          )
+        )
+      ),
+      sec('Инструкция по настройке',
+        instructions
+      ),
+      sec('Сервисы Google',
+        el('div', { className: 'section-desc', textContent: 'Быстрые ссылки на Google One, Keep, Photos, Meet, Docs, Sheets и др.' }),
+        el('div', { className: 'btn-row' }, addShortcutsBtn)
+      )
     );
   }
 
   /* ---------- Init ---------- */
-  document.addEventListener('DOMContentLoaded', async () => {
-    const res = await store.get(['cros_v2']);
-    Object.assign(state, res.cros_v2 || {});
+  async function initDesktop() {
+    // 1. Storage migration (cros_v2 -> cros_v3)
+    const res = await store.get(['cros_v3', 'cros_v2']);
+    const migrated = migrateStorage(res);
+    Object.assign(state, migrated);
+    await save();
+
+    // 2. Synchronize GoogleService configuration
+    if (window.GoogleService) {
+      window.GoogleService.configure({
+        clientId: state.google ? state.google.clientId : '',
+        mockMode: state.google ? !!state.google.mockMode : false
+      });
+    }
+
+    // 3. Initialize desktop subsystems
     initSearch();
     renderShortcuts();
-    renderWidgets();
+
+    if (window.CrosWidgets) {
+      window.CrosWidgets.init({
+        container: $('widgets'),
+        getWidgets: () => state.widgets,
+        onSave: () => {
+          save();
+          renderWidgetsManagerList();
+        }
+      });
+    }
+
     applyWallpaper();
     initSettings();
+    renderWidgetsManagerList();
+
+    // Desktop Context Menu
     document.addEventListener('contextmenu', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       e.preventDefault();
       menu(e.clientX, e.clientY, [
         ['Новый ярлык', addShortcutDialog],
         ['Ярлык приложения…', addAppDialog],
-        ['Новый виджет', addWidgetDialog],
+        ['Новый виджет', addWidgetCatalogDialog],
         ['Полный экран', toggleFullscreen],
         ['Настройки и обои', () => $('settings-toggle').click()],
       ]);
     });
+
     document.addEventListener('pointerdown', (e) => {
       if (!e.target.closest('.ctx-menu')) document.querySelectorAll('.ctx-menu').forEach((m) => m.remove());
       if (!e.target.closest('.shortcut')) document.querySelectorAll('.shortcut.selected').forEach((n) => n.classList.remove('selected'));
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.ctx-menu').forEach((m) => m.remove()); });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') document.querySelectorAll('.ctx-menu').forEach((m) => m.remove());
+    });
+
     let rt;
-    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderShortcuts, 150); });
+    addEventListener('resize', () => {
+      clearTimeout(rt);
+      rt = setTimeout(renderShortcuts, 150);
+    });
+
     $('fullscreen-toggle').addEventListener('click', toggleFullscreen);
+
     // Browsers require a user gesture to enter fullscreen
     document.addEventListener('pointerdown', () => {
-      if (state.autoFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      if (state.autoFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
     }, { once: true });
-  });
+  }
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', initDesktop);
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { migrateStorage, state, save };
+  }
 })();

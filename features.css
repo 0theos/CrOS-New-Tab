@@ -100,8 +100,730 @@ body.has-wallpaper .shortcut { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .btn { height: 34px; padding: 0 16px; border-radius: 17px; cursor: pointer; font: inherit; font-size: 13px;
   border: 1px solid var(--theme-border); background: var(--theme-surface-high); color: var(--theme-text); }
-.btn-primary { background: var(--theme-accent); color: #111; border-color: transparent; }
+.btn-primary { background: var(--theme-accent); color: #111; border-color: transparent; font-weight: 500; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .cros-range { width: 100%; margin-top: 8px; }
 .settings-extra { margin-top: 22px; }
-.settings-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 10px; }
+.settings-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 10px; cursor: pointer; }
+
+/* Settings Navigation Tabs */
+.settings-nav-tabs { display: flex; gap: 6px; padding: 10px 16px 14px; border-bottom: 1px solid var(--theme-border); }
+.settings-tab-btn {
+  flex: 1; height: 32px; border-radius: 16px; border: 1px solid transparent; background: transparent;
+  color: var(--theme-text-subtle); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all .2s ease; display: flex; align-items: center; justify-content: center;
+}
+.settings-tab-btn:hover { background: var(--theme-surface); color: var(--theme-text); }
+.settings-tab-btn.active {
+  background: var(--theme-surface-high); border-color: var(--theme-border); color: var(--theme-accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.settings-tab-pane { padding: 4px 0 16px; }
+.section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+
+/* Widgets Manager in Settings Panel */
+.widget-manager-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 380px; overflow-y: auto; }
+.widget-manager-item {
+  display: flex; align-items: center; justify-content: space-between; padding: 8px 12px;
+  border-radius: 12px; background: var(--theme-surface); border: 1px solid var(--theme-border);
+  transition: background .15s;
+}
+.widget-manager-item:hover { background: var(--theme-surface-high); }
+.widget-manager-info { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.widget-manager-title { font-size: 13px; font-weight: 500; color: var(--theme-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.widget-manager-badge {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .3px; color: var(--theme-text-subtle);
+  background: var(--theme-surface-high); padding: 1px 6px; border-radius: 6px;
+}
+.widget-manager-actions { display: flex; align-items: center; gap: 6px; }
+.widget-manager-del {
+  width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent;
+  color: var(--theme-text-subtle); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+}
+.widget-manager-del:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+/* Widget Catalog Dialog */
+.catalog-dialog { width: 440px; max-width: calc(100vw - 32px); }
+.widget-catalog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 16px 0; max-height: 60vh; overflow-y: auto; padding: 4px; }
+.widget-catalog-card {
+  display: flex; flex-direction: column; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--theme-border); background: var(--theme-surface); cursor: pointer; text-align: left;
+  transition: all .2s;
+}
+.widget-catalog-card:hover {
+  background: var(--theme-surface-high); border-color: var(--theme-accent); transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.widget-catalog-icon { font-size: 22px; margin-bottom: 4px; }
+.widget-catalog-title { font-size: 13px; font-weight: 600; color: var(--theme-text); }
+.widget-catalog-desc { font-size: 11px; color: var(--theme-text-subtle); margin-top: 2px; line-height: 1.3; }
+
+/* Clock & Date Widget */
+.widget-clock-time { font-size: 2.4rem; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--theme-text); text-align: center; margin-top: 4px; }
+.widget-clock-date { font-size: .95rem; font-weight: 500; color: var(--theme-accent); text-align: center; margin-top: 4px; text-transform: capitalize; }
+.widget-clock-controls { display: flex; justify-content: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.widget-chip-btn {
+  height: 22px; padding: 0 8px; border-radius: 11px; border: 1px solid var(--theme-border);
+  background: var(--theme-surface); color: var(--theme-text-subtle); font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.widget-chip-btn:hover, .widget-chip-btn.active { background: var(--theme-surface-high); color: var(--theme-accent); border-color: var(--theme-accent); }
+
+/* Note & Todo Widgets */
+.widget-note-textarea { width: 100%; height: 100%; border: none; background: transparent; color: var(--theme-text); font: inherit; font-size: 14px; resize: none; outline: none; }
+.widget-todo-list { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; min-height: 40px; }
+.widget-todo-input { width: 100%; border: none; border-bottom: 1px solid var(--theme-border); background: transparent; color: var(--theme-text); font: inherit; font-size: 13px; padding: 4px 0; outline: none; }
+.todo-del-btn { background: none; border: none; color: var(--theme-text-subtle); cursor: pointer; padding: 2px 4px; }
+.todo-del-btn:hover { color: var(--theme-text); }
+
+/* Weather & Google Widget Stubs */
+.weather-stub-card, .google-stub-card { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.weather-stub-header { display: flex; justify-content: space-between; align-items: center; }
+.weather-stub-city { font-weight: 600; font-size: 14px; color: var(--theme-text); }
+.weather-stub-badge { font-size: 10px; color: var(--theme-accent); background: var(--theme-ambient); padding: 2px 6px; border-radius: 6px; }
+.weather-stub-temp { font-size: 2rem; font-weight: 500; color: var(--theme-text); }
+.weather-stub-desc { font-size: 12px; color: var(--theme-text-subtle); }
+.google-stub-title { font-weight: 600; font-size: 14px; color: var(--theme-accent); }
+.google-stub-desc { font-size: 12px; color: var(--theme-text-subtle); line-height: 1.4; }
+
+/* Weather Widget (Milestone 4 Open-Meteo Integration) */
+.weather-widget {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  gap: 8px;
+  position: relative;
+  user-select: none;
+}
+.weather-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--theme-border);
+}
+.weather-city-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.weather-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--theme-text-subtle);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: all .15s ease;
+  line-height: 1;
+}
+.weather-icon-btn:hover {
+  background: var(--theme-surface-high);
+  color: var(--theme-text);
+}
+.weather-search-bar {
+  position: relative;
+  width: 100%;
+  margin-top: 2px;
+}
+.weather-search-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  font-size: 12px;
+  outline: none;
+}
+.weather-search-input:focus {
+  border-color: var(--theme-accent);
+}
+.weather-search-dropdown {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  background: var(--theme-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3);
+  z-index: 100;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.weather-search-item {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: background .15s;
+}
+.weather-search-item:hover {
+  background: var(--theme-surface-high);
+}
+.weather-search-item.empty {
+  color: var(--theme-text-subtle);
+  cursor: default;
+}
+.weather-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.weather-current-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.weather-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+.weather-temp {
+  font-size: 2.2rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-text);
+  letter-spacing: -1px;
+}
+.weather-current-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+.weather-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--theme-text);
+}
+.weather-wind {
+  font-size: 11px;
+  color: var(--theme-text-subtle);
+}
+.weather-offline-badge {
+  font-size: 10px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-forecast {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(55px, 1fr));
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--theme-border);
+}
+.forecast-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  font-size: 11px;
+  gap: 2px;
+}
+.forecast-weekday {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--theme-text-subtle);
+  text-transform: capitalize;
+}
+.forecast-icon {
+  font-size: 14px;
+}
+.forecast-temp {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-text);
+  white-space: nowrap;
+}
+.weather-loading-text {
+  font-size: 12px;
+  color: var(--theme-text-subtle);
+  text-align: center;
+  padding: 20px 0;
+}
+.weather-error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  text-align: center;
+}
+.weather-error-msg {
+  font-size: 12px;
+  color: var(--theme-text-subtle);
+}
+.weather-retry-btn {
+  height: 26px;
+  font-size: 11px;
+  padding: 0 12px;
+}
+
+/* =========================================================================
+   Google Services Widgets & Google Settings (Milestone 5 / R2)
+   ========================================================================= */
+
+/* State Cards (NO_CLIENT_ID, NOT_LOGGED_IN, ERROR) */
+.google-widget-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+.google-state-card {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 8px;
+  gap: 8px;
+}
+.google-state-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.google-state-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text);
+}
+.google-state-desc {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--theme-text-subtle);
+  max-width: 260px;
+}
+.google-action-btn {
+  margin-top: 4px;
+  font-size: 12px;
+  padding: 6px 14px;
+}
+.google-state-error {
+  font-size: 11px;
+  color: #ea4335;
+  margin-top: 4px;
+}
+.google-retry-btn {
+  font-size: 11.5px;
+  padding: 4px 12px;
+}
+
+/* Widget Top Bar & Badges */
+.google-widget-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--theme-border);
+}
+.google-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.google-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.google-badge {
+  font-size: 9.5px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+.google-badge-mock {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.google-badge-cached {
+  background: rgba(138, 180, 248, 0.15);
+  color: var(--theme-accent);
+  border: 1px solid var(--theme-border);
+}
+.google-loading-text, .google-empty-text {
+  font-size: 12px;
+  color: var(--theme-text-subtle);
+  text-align: center;
+  padding: 24px 8px;
+}
+
+/* Google Calendar Widget */
+.google-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+.cal-event-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  gap: 4px;
+  transition: background-color 0.15s ease;
+}
+.cal-event-item:hover {
+  background: var(--theme-surface-high);
+}
+.cal-event-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--theme-text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-event-title:hover {
+  color: var(--theme-accent);
+}
+.cal-event-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+.cal-event-time {
+  font-size: 10.5px;
+  color: var(--theme-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.cal-meet-btn {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #34a853;
+  background: rgba(52, 168, 83, 0.12);
+  border: 1px solid rgba(52, 168, 83, 0.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cal-meet-btn:hover {
+  background: rgba(52, 168, 83, 0.22);
+}
+
+/* Gmail Widget */
+.gmail-unread-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--theme-surface);
+  color: var(--theme-text-subtle);
+  border: 1px solid var(--theme-border);
+}
+.gmail-unread-pill.has-unread {
+  background: rgba(234, 67, 53, 0.15);
+  color: #ea4335;
+  border-color: rgba(234, 67, 53, 0.3);
+}
+.gmail-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+.gmail-msg-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  gap: 2px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+}
+.gmail-msg-item:hover {
+  background: var(--theme-surface-high);
+}
+.gmail-msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gmail-msg-from {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--theme-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gmail-msg-subject {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--theme-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gmail-msg-snippet {
+  font-size: 11px;
+  color: var(--theme-text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Google Drive Widget */
+.drive-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+.drive-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+}
+.drive-file-item:hover {
+  background: var(--theme-surface-high);
+}
+.drive-file-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.drive-file-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.drive-file-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--theme-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drive-file-type {
+  font-size: 10.5px;
+  color: var(--theme-text-subtle);
+}
+
+/* Google News Widget */
+.news-topbar {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.news-topics-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  align-items: center;
+}
+.news-topic-chip {
+  height: 22px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 8px;
+  border-radius: 11px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text-subtle);
+  cursor: pointer;
+  white-space: nowrap;
+  outline: none;
+  transition: all 0.15s ease;
+}
+.news-topic-chip:hover {
+  background: var(--theme-surface-high);
+  color: var(--theme-text);
+}
+.news-topic-chip.active {
+  background: var(--theme-accent);
+  color: #000;
+  border-color: var(--theme-accent);
+  font-weight: 600;
+}
+.google-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+.news-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s ease;
+}
+.news-item-row:hover {
+  background: var(--theme-surface-high);
+}
+.news-item-title {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--theme-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.news-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.news-source-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--theme-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.news-item-time {
+  font-size: 10px;
+  color: var(--theme-text-subtle);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Google Settings Tab Components */
+.google-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.google-status-pill {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+.google-status-pill.pill-online {
+  background: rgba(52, 168, 83, 0.15);
+  color: #34a853;
+  border: 1px solid rgba(52, 168, 83, 0.3);
+}
+.google-status-pill.pill-mock {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.google-status-pill.pill-offline {
+  background: var(--theme-surface);
+  color: var(--theme-text-subtle);
+  border: 1px solid var(--theme-border);
+}
+.google-auth-message {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--theme-text-subtle);
+}
+.google-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.google-input-client-id {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-family: monospace;
+}
+.google-save-status {
+  font-size: 11.5px;
+  color: #34a853;
+  margin-top: 2px;
+  display: block;
+}
+.google-redirect-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  background: var(--theme-surface-high);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.google-redirect-code {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--theme-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.google-instructions {
+  font-size: 11.5px;
+  color: var(--theme-text);
+  line-height: 1.4;
+}
+.google-instructions ol {
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.google-instructions li {
+  margin: 2px 0;
+}
+
+
+

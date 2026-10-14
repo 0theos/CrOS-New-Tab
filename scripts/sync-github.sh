@@ -5,34 +5,57 @@
 set -e
 
 COMMIT_MSG="${1:-Update extension version and modules}"
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+REQUIRED_BRANCH="feature/CrOS_0.3"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 
 echo "=================================================="
 echo "🚀 CrOS Modular Assistant — Синхронизация с GitHub"
 echo "=================================================="
 
-# 1. Проверка git статуса
-if [ -z "$(git status --porcelain)" ]; then
-  echo "✓ Рабочая директория чиста. Нет несохраненных изменений."
+# 1. Проверка текущей ветки (Repo Safety Guard)
+if [ -z "$CURRENT_BRANCH" ]; then
+  echo "❌ Ошибка: Не удалось определить текущую ветку Git." >&2
+  exit 1
+fi
+
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  echo "❌ Ошибка безопасности: Прямой пуш в ветку 'main' строго запрещен политикой проекта." >&2
+  echo "Пожалуйста, переключитесь на ветку '$REQUIRED_BRANCH' перед отправкой изменений:" >&2
+  echo "  git checkout $REQUIRED_BRANCH" >&2
+  exit 1
+fi
+
+if [ "$CURRENT_BRANCH" != "$REQUIRED_BRANCH" ]; then
+  echo "❌ Ошибка: Текущая ветка '$CURRENT_BRANCH'. Разрешено отправлять изменения только в ветку '$REQUIRED_BRANCH'." >&2
+  echo "Пожалуйста, переключитесь на ветку '$REQUIRED_BRANCH':" >&2
+  echo "  git checkout $REQUIRED_BRANCH" >&2
+  exit 1
+fi
+
+echo "✓ Проверка ветки пройдена: активна '$REQUIRED_BRANCH'"
+
+# 2. Проверка git статуса и добавление изменений
+git add -A ":!.agents" ":!*.agents" 2>/dev/null || git add -A
+if git diff --cached --quiet; then
+  echo "✓ Нет изменений для коммита."
 else
   echo "📦 Добавление изменений в коммит..."
-  git add .
   git commit -m "$COMMIT_MSG"
   echo "✓ Коммит создан: '$COMMIT_MSG'"
 fi
 
-# 2. Проверка удаленного репозитория
+# 3. Проверка удаленного репозитория
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
 
 if [ -z "$REMOTE_URL" ]; then
   echo "⚠️ Внимание: Удаленный репозиторий 'origin' еще не привязан к GitHub."
   echo "Для первой привязки выполните:"
   echo "  git remote add origin https://github.com/0theos/<ИМЯ_РЕПОЗИТОРИЯ>.git"
-  echo "  git push -u origin $BRANCH"
+  echo "  git push -u origin $REQUIRED_BRANCH"
 else
-  echo "🌐 Отправка новой версии на GitHub ($REMOTE_URL, ветка $BRANCH)..."
-  git push origin "$BRANCH"
-  echo "✓ Новая версия успешно отправлена на GitHub!"
+  echo "🌐 Отправка новой версии на GitHub ($REMOTE_URL, ветка $REQUIRED_BRANCH)..."
+  git push origin "$REQUIRED_BRANCH"
+  echo "✓ Новая версия успешно отправлена на GitHub ($REQUIRED_BRANCH)!"
 fi
 
 echo "=================================================="

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CrOS New Tab",
-  "version": "0.2.0",
-  "description": "Пустая новая вкладка с адаптацией под цветовую гамму ChromeOS.",
+  "version": "0.3.0",
+  "description": "Полноценный рабочий стол для ChromeOS в новой вкладке: виджеты, сервисы Google, погода и защита от случайного закрытия.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -11,10 +11,22 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "permissions": [
     "storage",
     "management",
     "search",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "tabs",
+    "identity",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://*.googleapis.com/*",
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://news.google.com/*"
   ]
 }

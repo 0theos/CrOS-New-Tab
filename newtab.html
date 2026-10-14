@@ -470,59 +470,101 @@
       <button class="settings-close-btn" id="settings-close" title="Закрыть">✕</button>
     </div>
 
-    <div class="settings-section">
-      <div class="section-label">Цветовая гамма</div>
-      <div class="section-desc">Выберите тему или создайте свой цвет</div>
+    <!-- Settings Tabs Navigation -->
+    <nav class="settings-nav-tabs" id="settings-nav-tabs">
+      <button type="button" class="settings-tab-btn active" data-tab="appearance" id="tab-btn-appearance">🎨 Вид</button>
+      <button type="button" class="settings-tab-btn" data-tab="widgets" id="tab-btn-widgets">🧩 Виджеты</button>
+      <button type="button" class="settings-tab-btn" data-tab="google" id="tab-btn-google">🌐 Google</button>
+      <button type="button" class="settings-tab-btn" data-tab="protection" id="tab-btn-protection">🛡️ Защита</button>
+    </nav>
 
-      <!-- 2 lines of 4 squares (8 squares total) -->
-      <div class="palette-grid" id="palette-grid">
-        <!-- 1. Auto/System (pleasant grey/white) -->
-        <button class="palette-square square-auto" data-preset="auto" title="Автоматически (по теме браузера)"></button>
-        <!-- 2. Ocean Blue -->
-        <button class="palette-square" data-color="#1e293b" style="background-color: #1e293b;" title="Синий океан"></button>
-        <!-- 3. Emerald Sage -->
-        <button class="palette-square" data-color="#143026" style="background-color: #143026;" title="Изумрудный"></button>
-        <!-- 4. Warm Amber -->
-        <button class="palette-square" data-color="#312213" style="background-color: #312213;" title="Янтарный"></button>
+    <!-- Tab 1: Appearance (Внешний вид) -->
+    <div class="settings-tab-pane active" id="tab-pane-appearance">
+      <div class="settings-section">
+        <div class="section-label">Цветовая гамма</div>
+        <div class="section-desc">Выберите тему или создайте свой цвет</div>
 
-        <!-- 5. Deep Amethyst -->
-        <button class="palette-square" data-color="#251636" style="background-color: #251636;" title="Аметист"></button>
-        <!-- 6. Dusty Rose / Coral -->
-        <button class="palette-square" data-color="#321620" style="background-color: #321620;" title="Коралловый"></button>
-        <!-- 7. Midnight Teal -->
-        <button class="palette-square" data-color="#102b30" style="background-color: #102b30;" title="Морской циан"></button>
-        <!-- 8. Rainbow (Custom Picker) -->
-        <button class="palette-square square-rainbow" id="rainbow-square" title="Свой цвет (колесо, текст, пипетка)"></button>
-      </div>
-    </div>
+        <!-- 2 lines of 4 squares (8 squares total) -->
+        <div class="palette-grid" id="palette-grid">
+          <!-- 1. Auto/System (pleasant grey/white) -->
+          <button class="palette-square square-auto" data-preset="auto" title="Автоматически (по теме браузера)"></button>
+          <!-- 2. Ocean Blue -->
+          <button class="palette-square" data-color="#1e293b" style="background-color: #1e293b;" title="Синий океан"></button>
+          <!-- 3. Emerald Sage -->
+          <button class="palette-square" data-color="#143026" style="background-color: #143026;" title="Изумрудный"></button>
+          <!-- 4. Warm Amber -->
+          <button class="palette-square" data-color="#312213" style="background-color: #312213;" title="Янтарный"></button>
 
-    <!-- Custom Color Sub-Menu -->
-    <div class="custom-picker-section" id="custom-picker-section">
-      <!-- Color Wheel Canvas -->
-      <div class="wheel-container">
-        <canvas id="color-wheel-canvas" width="130" height="130"></canvas>
-        <div class="slider-row">
-          <span class="slider-label">Яркость</span>
-          <input type="range" class="range-slider" id="lightness-slider" min="5" max="95" value="15">
+          <!-- 5. Deep Amethyst -->
+          <button class="palette-square" data-color="#251636" style="background-color: #251636;" title="Аметист"></button>
+          <!-- 6. Dusty Rose / Coral -->
+          <button class="palette-square" data-color="#321620" style="background-color: #321620;" title="Коралловый"></button>
+          <!-- 7. Midnight Teal -->
+          <button class="palette-square" data-color="#102b30" style="background-color: #102b30;" title="Морской циан"></button>
+          <!-- 8. Rainbow (Custom Picker) -->
+          <button class="palette-square square-rainbow" id="rainbow-square" title="Свой цвет (колесо, текст, пипетка)"></button>
         </div>
       </div>
 
-      <!-- Text Input and Eyedropper -->
-      <div class="picker-inputs-row">
-        <div class="color-preview-badge" id="color-preview-badge"></div>
-        <input type="text" class="hex-input" id="custom-hex-input" placeholder="#1E1F22" maxlength="7">
-        <button class="eyedropper-btn" id="eyedropper-btn" title="Взять цвет с экрана">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m14 2 4 4L7 17l-4 1 1-4 11-11z"></path>
-            <path d="m13 7 4 4"></path>
-          </svg>
-          <span>Пипетка</span>
-        </button>
+      <!-- Custom Color Sub-Menu -->
+      <div class="custom-picker-section" id="custom-picker-section">
+        <!-- Color Wheel Canvas -->
+        <div class="wheel-container">
+          <canvas id="color-wheel-canvas" width="130" height="130"></canvas>
+          <div class="slider-row">
+            <span class="slider-label">Яркость</span>
+            <input type="range" class="range-slider" id="lightness-slider" min="5" max="95" value="15">
+          </div>
+        </div>
+
+        <!-- Text Input and Eyedropper -->
+        <div class="picker-inputs-row">
+          <div class="color-preview-badge" id="color-preview-badge"></div>
+          <input type="text" class="hex-input" id="custom-hex-input" placeholder="#1E1F22" maxlength="7">
+          <button class="eyedropper-btn" id="eyedropper-btn" title="Взять цвет с экрана">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m14 2 4 4L7 17l-4 1 1-4 11-11z"></path>
+              <path d="m13 7 4 4"></path>
+            </svg>
+            <span>Пипетка</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Wallpaper mount point -->
+      <div id="wallpaper-settings-mount"></div>
+    </div>
+
+    <!-- Tab 2: Widgets (Виджеты) -->
+    <div class="settings-tab-pane" id="tab-pane-widgets" style="display: none;">
+      <div class="settings-section">
+        <div class="section-header-row">
+          <div>
+            <div class="section-label">Активные виджеты</div>
+            <div class="section-desc">Включение, скрытие и удаление</div>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-add-widget-catalog">+ Добавить</button>
+        </div>
+        <div class="widget-manager-list" id="widget-manager-list"></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Google Services & OAuth (R2) -->
+    <div class="settings-tab-pane" id="tab-pane-google" style="display: none;">
+      <div id="google-settings-mount"></div>
+    </div>
+
+    <!-- Tab 4: Protection & Behavior (Защита и поведение) -->
+    <div class="settings-tab-pane" id="tab-pane-protection" style="display: none;">
+      <div id="protection-settings-mount"></div>
     </div>
   </aside>
 
   <script src="newtab.js"></script>
+  <script src="protection.js"></script>
+  <script src="services/weather-service.js"></script>
+  <script src="services/google-service.js"></script>
+  <script src="widgets.js"></script>
   <script src="features.js"></script>
 </body>
 </html>
