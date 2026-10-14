@@ -429,20 +429,20 @@
   <div id="wallpaper"></div>
   <div id="wallpaper-dim"></div>
 
-  <!-- M3 Digital Clock -->
-  <main class="m3-clock-card" id="clock-card" aria-label="Часы">
-    <div class="m3-time" id="clock-time">
-      <span id="hours">--</span><span class="m3-time-colon">:</span><span id="minutes">--</span>
-    </div>
-    <div class="m3-date" id="clock-date">--</div>
-  </main>
-
   <!-- Quick search -->
   <form class="search-form" id="search-form" role="search" autocomplete="off">
     <svg class="search-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
     <input class="search-input" id="search-input" type="text" placeholder="Поиск или адрес" aria-label="Поиск" autofocus>
     <span class="search-hint" title="Нажмите / для поиска">/</span>
   </form>
+
+  <!-- M3 Digital Clock (centered below search) -->
+  <main class="m3-clock-card" id="clock-card" aria-label="Часы">
+    <div class="m3-time" id="clock-time">
+      <span id="hours">--</span><span class="m3-time-colon">:</span><span id="minutes">--</span>
+    </div>
+    <div class="m3-date" id="clock-date">--</div>
+  </main>
 
   <!-- Desktop surface: icons and free-floating widgets -->
   <div id="desktop">
@@ -475,7 +475,7 @@
       <button type="button" class="settings-tab-btn active" data-tab="appearance" id="tab-btn-appearance">🎨 Вид</button>
       <button type="button" class="settings-tab-btn" data-tab="widgets" id="tab-btn-widgets">🧩 Виджеты</button>
       <button type="button" class="settings-tab-btn" data-tab="google" id="tab-btn-google">🌐 Google</button>
-      <button type="button" class="settings-tab-btn" data-tab="protection" id="tab-btn-protection">🛡️ Защита</button>
+      <button type="button" class="settings-tab-btn" data-tab="desktop" id="tab-btn-desktop">🖥️ Рабочий стол</button>
     </nav>
 
     <!-- Tab 1: Appearance (Внешний вид) -->
@@ -541,7 +541,7 @@
         <div class="section-header-row">
           <div>
             <div class="section-label">Активные виджеты</div>
-            <div class="section-desc">Включение, скрытие и удаление</div>
+            <div class="section-desc">Включение, скрытие, закрепление и удаление</div>
           </div>
           <button type="button" class="btn btn-primary" id="btn-add-widget-catalog">+ Добавить</button>
         </div>
@@ -554,14 +554,13 @@
       <div id="google-settings-mount"></div>
     </div>
 
-    <!-- Tab 4: Protection & Behavior (Защита и поведение) -->
-    <div class="settings-tab-pane" id="tab-pane-protection" style="display: none;">
-      <div id="protection-settings-mount"></div>
+    <!-- Tab 4: Desktop Controls (Рабочий стол) -->
+    <div class="settings-tab-pane" id="tab-pane-desktop" style="display: none;">
+      <div id="desktop-settings-mount"></div>
     </div>
   </aside>
 
   <script src="newtab.js"></script>
-  <script src="protection.js"></script>
   <script src="services/weather-service.js"></script>
   <script src="services/google-service.js"></script>
   <script src="widgets.js"></script>

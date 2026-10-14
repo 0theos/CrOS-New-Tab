@@ -138,21 +138,14 @@
     }
 
     const autoFullscreen = Boolean(v2.autoFullscreen);
-    let closeProtection = true;
-    if (v2.closeProtection !== undefined) {
-      closeProtection = Boolean(v2.closeProtection);
-    } else if (v2.antiClose !== undefined) {
-      closeProtection = Boolean(v2.antiClose);
-    }
 
     return {
-      version: 3,
+      version: 4,
       shortcuts,
       widgets: migratedWidgets,
       wallpaper,
       dim,
       autoFullscreen,
-      closeProtection,
       google: {
         clientId: '',
         mockMode: false
@@ -181,8 +174,7 @@
       widgets: state.widgets,
       wallpaper: v2Wallpaper,
       dim: state.dim,
-      autoFullscreen: state.autoFullscreen,
-      closeProtection: state.closeProtection
+      autoFullscreen: state.autoFullscreen
     };
 
     return store.set({ cros_v3: state, cros_v2: v2State });
@@ -209,24 +201,18 @@
     } catch { return null; }
   }
   function openLink(url, s) {
-    if (s && s.type === 'app' && chrome.management && chrome.management.launchApp) { chrome.management.launchApp(s.appId); return; }
-    const scheme = new URL(url).protocol;
-    if (scheme === 'http:' || scheme === 'https:') {
-      if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
-        window.__crosNavigate(url);
-      } else {
-        if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
-          window.__crosAllowNavigation();
-        }
-        location.href = url;
-      }
+    if (s && s.type === 'app' && chrome.management && chrome.management.launchApp) {
+      chrome.management.launchApp(s.appId);
       return;
     }
-    // file:// and chrome:// are not navigable from a page, but the tabs API can open them
-    if ((scheme === 'file:' || scheme === 'chrome:') && chrome.tabs) { chrome.tabs.create({ url }); return; }
-    // Custom protocol: let the browser hand it to the registered app, without leaving this page
-    const a = el('a', { href: url, target: '_blank', rel: 'noopener' });
-    document.body.append(a); a.click(); a.remove();
+    const scheme = new URL(url).protocol;
+    // file:// and chrome:// are not navigable from a page directly, but tabs API can open them
+    if ((scheme === 'file:' || scheme === 'chrome:') && chrome.tabs && chrome.tabs.create) {
+      chrome.tabs.create({ url, active: true });
+      return;
+    }
+    // Shortcut links ALWAYS open in a new tab
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
   const safeUrl = (u) => { try { return ['http:', 'https:'].includes(new URL(normUrl(u)).protocol) ? normUrl(u) : null; } catch { return null; } };
 
@@ -246,25 +232,13 @@
       const direct = /^(https?:\/\/|[\w-]+(\.[\w-]+)+(\/|$))/i.test(q) && !/\s/.test(q);
       const targetUrl = direct ? normUrl(q) : 'https://www.google.com/search?q=' + encodeURIComponent(q);
       if (direct) {
-        if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
-          window.__crosNavigate(targetUrl);
-        } else {
-          if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
-            window.__crosAllowNavigation();
-          }
-          location.href = targetUrl;
-        }
+        location.href = targetUrl;
       }
-      else if (chrome.search && chrome.search.query) chrome.search.query({ text: q, disposition: 'CURRENT_TAB' });
+      else if (chrome.search && chrome.search.query) {
+        chrome.search.query({ text: q, disposition: 'CURRENT_TAB' });
+      }
       else {
-        if (typeof window !== 'undefined' && typeof window.__crosNavigate === 'function') {
-          window.__crosNavigate(targetUrl);
-        } else {
-          if (typeof window !== 'undefined' && typeof window.__crosAllowNavigation === 'function') {
-            window.__crosAllowNavigation();
-          }
-          location.href = targetUrl;
-        }
+        location.href = targetUrl;
       }
     });
     // Quick access: type anywhere, or "/" to focus
@@ -345,14 +319,29 @@
           if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
           dragging = true;
           node.classList.add('dragging');
-          node.style.left = ox + ev.clientX - sx + 'px';
-          node.style.top = oy + ev.clientY - sy + 'px';
+          const rawLeft = ox + ev.clientX - sx;
+          const rawTop = oy + ev.clientY - sy;
+          const targetCol = Math.min(gridCols() - 1, Math.max(0, Math.round((rawLeft - GRID_LEFT) / CELL_W)));
+          const targetRow = Math.min(gridRows() - 1, Math.max(0, Math.round((rawTop - GRID_TOP) / CELL_H)));
+          const snappedLeft = GRID_LEFT + targetCol * CELL_W;
+          const snappedTop = GRID_TOP + targetRow * CELL_H;
+          const dist = Math.hypot(rawLeft - snappedLeft, rawTop - snappedTop);
+          if (dist < 28) {
+            node.style.left = snappedLeft + 'px';
+            node.style.top = snappedTop + 'px';
+            node.classList.add('snapped-to-grid');
+          } else {
+            node.style.left = rawLeft + 'px';
+            node.style.top = rawTop + 'px';
+            node.classList.remove('snapped-to-grid');
+          }
         };
         const up = () => {
           removeEventListener('pointermove', mv);
           removeEventListener('pointerup', up);
           if (!dragging) return;
           node.classList.remove('dragging');
+          node.classList.remove('snapped-to-grid');
           const col = Math.min(gridCols() - 1, Math.max(0, Math.round((node.offsetLeft - GRID_LEFT) / CELL_W)));
           const row = Math.min(gridRows() - 1, Math.max(0, Math.round((node.offsetTop - GRID_TOP) / CELL_H)));
           if (!cellTaken(col, row, s.id)) { s.col = col; s.row = row; save(); }
@@ -520,6 +509,19 @@
       const badge = el('span', { className: 'widget-manager-badge', textContent: w.type });
       const info = el('div', { className: 'widget-manager-info' }, cb, titleSpan, badge);
 
+      const isPinned = !!w.pinned;
+      const pinBtn = el('button', {
+        className: 'widget-manager-pin' + (isPinned ? ' pinned' : ''),
+        textContent: isPinned ? '📌' : '📍',
+        title: isPinned ? 'Открепить виджет' : 'Закрепить виджет'
+      });
+      pinBtn.onclick = () => {
+        w.pinned = !w.pinned;
+        save();
+        if (window.CrosWidgets) window.CrosWidgets.render();
+        renderWidgetsManagerList();
+      };
+
       const delBtn = el('button', { className: 'widget-manager-del', textContent: '✕', title: 'Удалить виджет' });
       delBtn.onclick = () => {
         if (window.CrosWidgets) {
@@ -532,7 +534,8 @@
         renderWidgetsManagerList();
       };
 
-      const item = el('div', { className: 'widget-manager-item' }, info, delBtn);
+      const actions = el('div', { className: 'widget-manager-actions' }, pinBtn, delBtn);
+      const item = el('div', { className: 'widget-manager-item' }, info, actions);
       listEl.append(item);
     });
   }
@@ -677,17 +680,10 @@
       );
     }
 
-    // 4. Mount Protection & Desktop Behavior Controls
-    const protMount = $('protection-settings-mount');
-    if (protMount) {
-      protMount.replaceChildren();
-
-      // Anti-close protection toggle (synchronized with cros_v3.closeProtection)
-      const protCb = el('input', { type: 'checkbox', checked: state.closeProtection !== false });
-      protCb.onchange = () => {
-        state.closeProtection = protCb.checked;
-        save();
-      };
+    // 4. Mount Desktop Controls Tab
+    const desktopMount = $('desktop-settings-mount');
+    if (desktopMount) {
+      desktopMount.replaceChildren();
 
       // Fullscreen controls
       const autoFs = el('input', { type: 'checkbox', checked: !!state.autoFullscreen });
@@ -707,20 +703,13 @@
       const sec = (title, ...kids) => el('div', { className: 'settings-section settings-extra' },
         el('div', { className: 'section-label', textContent: title }), ...kids);
 
-      protMount.append(
-        sec('Защита от закрытия (R4)',
-          el('label', { className: 'settings-check' }, protCb,
-            el('div', {},
-              el('strong', { textContent: 'Защита рабочего стола' }),
-              el('div', { className: 'section-desc', textContent: 'Предотвращает случайное закрытие вкладки и восстанавливает рабочий стол' })
-            )
-          )
-        ),
+      desktopMount.append(
         sec('Полноэкранный режим',
           el('div', { className: 'btn-row' }, fsBtn),
           el('label', { className: 'settings-check' }, autoFs, document.createTextNode('Входить в полный экран по первому клику'))
         ),
         sec('Ярлыки рабочего стола',
+          el('div', { className: 'section-desc', textContent: 'Ссылки из ярлыков всегда открываются в новой вкладке.' }),
           el('div', { className: 'btn-row' }, addSc, addApp)
         )
       );

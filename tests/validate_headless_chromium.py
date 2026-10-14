@@ -51,7 +51,6 @@ def validate_headless():
         ('html[lang="ru"]', 'lang="ru"'),
         ('link to features.css', 'href="features.css"'),
         ('script newtab.js', 'src="newtab.js"'),
-        ('script protection.js', 'src="protection.js"'),
         ('script weather-service.js', 'src="services/weather-service.js"'),
         ('script google-service.js', 'src="services/google-service.js"'),
         ('script widgets.js', 'src="widgets.js"'),

@@ -13,8 +13,21 @@ body.has-wallpaper { background-image: none; }
 #shortcuts, #widgets { position: absolute; inset: 0; pointer-events: none; }
 #shortcuts > *, #widgets > * { pointer-events: auto; }
 
-/* Compact clock, top right */
-.m3-clock-card { position: fixed; top: 12px; right: 16px; z-index: 5; padding: 8px 20px; border-radius: 20px; }
+/* Compact clock, center top, below search */
+.m3-clock-card {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
+  z-index: 5;
+  padding: 8px 24px;
+  border-radius: 20px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 .m3-time { font-size: 2.2rem; letter-spacing: -1px; }
 .m3-date { margin-top: 2px; font-size: .8rem; }
 
@@ -80,6 +93,31 @@ body.has-wallpaper .shortcut { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8
   cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
 }
 .item-remove:hover { background: var(--theme-border); color: var(--theme-text); }
+
+.widget-head-actions { display: flex; align-items: center; gap: 4px; }
+.item-pin {
+  width: 22px; height: 22px; border-radius: 50%; border: none; background: transparent; color: var(--theme-text-subtle);
+  cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  opacity: 0.6; transition: all .15s ease;
+}
+.item-pin:hover { background: var(--theme-border); color: var(--theme-text); opacity: 1; transform: scale(1.1); }
+.item-pin.pinned { opacity: 1; color: var(--theme-accent); }
+
+.widget.widget-pinned { resize: none !important; }
+.widget.widget-pinned .widget-head { cursor: default; }
+.widget.widget-pinned .item-remove { display: none !important; }
+
+.widget-manager-pin {
+  width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--theme-border); background: transparent;
+  color: var(--theme-text-subtle); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.widget-manager-pin:hover { background: var(--theme-surface-high); color: var(--theme-text); }
+.widget-manager-pin.pinned { border-color: var(--theme-accent); color: var(--theme-accent); background: rgba(138, 180, 248, 0.15); }
+
+.shortcut.snapped-to-grid {
+  outline: 2px solid var(--theme-accent);
+}
 
 /* Context menu */
 .ctx-menu { position: fixed; z-index: 3000; min-width: 190px; padding: 6px; border-radius: 12px;

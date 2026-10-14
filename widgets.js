@@ -18,6 +18,9 @@
   const MIN_HEIGHT = 80;
   const DEFAULT_WIDTH = 280;
   const DEFAULT_HEIGHT = 180;
+  const GRID_STEP = 20;
+
+  const snapToGrid = (val, step = GRID_STEP) => Math.round(val / step) * step;
 
   // DOM helper
   const el = (tag, props = {}, ...children) => {
@@ -238,10 +241,11 @@
       if (w.enabled === undefined) {
         w.enabled = true;
       }
+      w.pinned = Boolean(w.pinned);
 
       // Root widget element
       const node = el('div', {
-        className: `widget widget-${w.type}` + (w.enabled === false ? ' widget-disabled' : ''),
+        className: `widget widget-${w.type}` + (w.enabled === false ? ' widget-disabled' : '') + (w.pinned ? ' widget-pinned' : ''),
         id: `widget-dom-${w.id}`
       });
       node.setAttribute('data-id', w.id);
@@ -262,19 +266,42 @@
         textContent: w.title || (def && def.title) || w.type
       });
 
+      // Pin / Lock button
+      const pinBtn = el('button', {
+        className: 'item-pin' + (w.pinned ? ' pinned' : ''),
+        title: w.pinned ? 'Открепить виджет' : 'Закрепить виджет',
+        textContent: w.pinned ? '📌' : '📍'
+      });
+
       // Delete button
       const rmBtn = el('button', {
         className: 'item-remove',
         title: 'Удалить виджет',
         textContent: '✕'
       });
+      if (w.pinned) {
+        rmBtn.style.display = 'none';
+      }
+
+      pinBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        w.pinned = !w.pinned;
+        pinBtn.classList.toggle('pinned', w.pinned);
+        pinBtn.title = w.pinned ? 'Открепить виджет' : 'Закрепить виджет';
+        pinBtn.textContent = w.pinned ? '📌' : '📍';
+        node.classList.toggle('widget-pinned', w.pinned);
+        rmBtn.style.display = w.pinned ? 'none' : '';
+        this.triggerSave();
+      });
+
       rmBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.removeWidget(w.id);
       });
 
-      // Header container
-      const head = el('div', { className: 'widget-head' }, titleSpan, rmBtn);
+      // Header container with actions
+      const actions = el('div', { className: 'widget-head-actions' }, pinBtn, rmBtn);
+      const head = el('div', { className: 'widget-head' }, titleSpan, actions);
 
       // Body container
       const body = el('div', { className: 'widget-body' });
@@ -285,9 +312,10 @@
         node.style.zIndex = ++zTop;
       });
 
-      // 1. Drag & drop positioning with pointer capture and bounds clamping
+      // 1. Drag & drop positioning with pointer capture, magnetic grid snapping and bounds clamping
       head.addEventListener('pointerdown', (e) => {
-        if (e.button !== 0 || e.target === rmBtn || e.target.closest('button, input, select')) return;
+        if (w.pinned) return;
+        if (e.button !== 0 || e.target === rmBtn || e.target === pinBtn || e.target.closest('button, input, select')) return;
         node.style.zIndex = ++zTop;
 
         const startX = e.clientX;
@@ -299,7 +327,15 @@
         node.classList.add('dragging');
 
         const onPointerMove = (ev) => {
-          const clamped = clampCoords(startLeft + (ev.clientX - startX), startTop + (ev.clientY - startY));
+          const rawX = startLeft + (ev.clientX - startX);
+          const rawY = startTop + (ev.clientY - startY);
+          const snappedX = snapToGrid(rawX, GRID_STEP);
+          const snappedY = snapToGrid(rawY, GRID_STEP);
+          const dist = Math.hypot(rawX - snappedX, rawY - snappedY);
+          // Magnetic threshold of 14px
+          const targetX = dist < 14 ? snappedX : rawX;
+          const targetY = dist < 14 ? snappedY : rawY;
+          const clamped = clampCoords(targetX, targetY);
           node.style.left = `${clamped.x}px`;
           node.style.top = `${clamped.y}px`;
         };
@@ -314,7 +350,9 @@
             head.releasePointerCapture(ev.pointerId);
           } catch (_) {}
 
-          const finalClamped = clampCoords(node.offsetLeft, node.offsetTop);
+          const snappedX = snapToGrid(node.offsetLeft, GRID_STEP);
+          const snappedY = snapToGrid(node.offsetTop, GRID_STEP);
+          const finalClamped = clampCoords(snappedX, snappedY);
           node.style.left = `${finalClamped.x}px`;
           node.style.top = `${finalClamped.y}px`;
           w.x = finalClamped.x;
@@ -331,12 +369,14 @@
       // 2. ResizeObserver with bounds clamping and debounced storage save
       try {
         const ro = new ResizeObserver(() => {
-          if (w.enabled === false) return;
+          if (w.enabled === false || w.pinned) return;
           const currentW = node.offsetWidth;
           const currentH = node.offsetHeight;
           if (Math.abs(currentW - w.w) < 2 && Math.abs(currentH - w.h) < 2) return;
 
-          const clamped = clampDimensions(currentW, currentH);
+          const snappedW = snapToGrid(currentW, GRID_STEP);
+          const snappedH = snapToGrid(currentH, GRID_STEP);
+          const clamped = clampDimensions(snappedW, snappedH);
           w.w = clamped.w;
           w.h = clamped.h;
           this.triggerSave();

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CrOS New Tab",
-  "version": "0.3.0",
-  "description": "Полноценный рабочий стол для ChromeOS в новой вкладке: виджеты, сервисы Google, погода и защита от случайного закрытия.",
+  "version": "0.4.0",
+  "description": "Полноценный рабочий стол для ChromeOS в новой вкладке: виджеты с закреплением, сетка, сервисы Google и погода.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -10,9 +10,6 @@
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
-  },
-  "background": {
-    "service_worker": "background.js"
   },
   "permissions": [
     "storage",

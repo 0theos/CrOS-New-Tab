@@ -1,22 +1,21 @@
-# Project: CrOS New Tab (v0.3.0)
+# Project: CrOS New Tab (v0.4.0)
 
-Кастомизируемая новая вкладка и полноценный рабочий стол для ChromeOS с виджетами, интеграцией Google Services, прогнозом погоды Open-Meteo, защитой от случайного закрытия и адаптивным Material 3 дизайном.
+Кастомизируемая новая вкладка и полноценный рабочий стол для ChromeOS с виджетами, закреплением виджетов, невидимой магнитной сеткой, интеграцией Google Services, прогнозом погоды Open-Meteo, ярлыками, открывающимися в новой вкладке, и адаптивным Material 3 дизайном.
 
 ---
 
 ## Architecture
 
-CrOS New Tab v0.3 спроектирован как чистое расширение Chrome Manifest V3 без внешних зависимостей, сборщиков и фреймворков.
+CrOS New Tab v0.4 спроектирован как чистое расширение Chrome Manifest V3 без внешних зависимостей, сборщиков и фреймворков.
 
-- **Manifest & Platform**: Manifest V3 (`manifest.json`), фон — Service Worker (`background.js`).
-- **UI Container**: `newtab.html` — единая точка входа для новой вкладки с адаптивной разметкой рабочего стола.
-- **Theme & Palette**: `newtab.js` — генерация динамической палитры Material 3, цветовой круг, EyeDropper, системные часы.
-- **Desktop & Layout**: `features.js` — сетка ярлыков, drag & drop, обои, диалоги настроек, миграция данных (`cros_v2` -> `cros_v3`).
-- **Widget Engine**: `widgets.js` — модульный реестр виджетов с поддержкой перетаскивания, изменения размеров (ResizeObserver), включения/отключения и независимого рендеринга.
+- **Manifest & Platform**: Manifest V3 (`manifest.json`), без тяжелых фоновых воркеров.
+- **UI Container**: `newtab.html` — единая точка входа для новой вкладки с адаптивной разметкой рабочего стола. Часы выровнены по центру прямо под строкой поиска.
+- **Theme & Palette**: `newtab.js` — генерация динамической палитры Material 3, цветовой круг, EyeDropper, синхронизация часов.
+- **Desktop & Layout**: `features.js` — магнитная сетка ярлыков, drag & drop с привязкой, открытие ярлыков строго в новой вкладке, обои, диалоги настроек.
+- **Widget Engine**: `widgets.js` — модульный реестр виджетов с поддержкой перетаскивания, магнитного прилипания к невидимой сетке, изменения размеров (ResizeObserver), закрепления виджетов (скрытие крестика и блокировка перемещения), включения/отключения и независимого рендеринга.
 - **External Services**:
   - `services/google-service.js`: Интеграция с Google Identity (`chrome.identity.launchWebAuthFlow`), поддержка настраиваемого Client ID, вызовы Google Calendar, Gmail, Google Drive API, Google News RSS, режим mock-ответов для тестов.
   - `services/weather-service.js`: Клиент Open-Meteo (бесплатный API без ключа), геокодирование городов, геолокация, кэширование и WMO-интерпретация.
-- **Background LifeCycle**: `background.js` — отслеживание закрытия вкладок/окон (`chrome.tabs.onRemoved`, `chrome.windows.onRemoved`) для предотвращения закрытия последнего рабочего стола.
 
 ---
 
@@ -24,23 +23,21 @@ CrOS New Tab v0.3 спроектирован как чистое расшире�
 
 ```text
 /home/otheos/CrOS-New-Tab/
-├── manifest.json              # MV3 конфигурация расширения (v0.3.0)
-├── background.js              # Service Worker (защита от закрытия, события вкладок)
+├── manifest.json              # MV3 конфигурация расширения (v0.4.0)
 ├── newtab.html                # Основной HTML рабочий стол
 ├── newtab.js                  # Часы, динамическая палитра Material 3
-├── protection.js              # Защита от закрытия (beforeunload, навигация ярлыков)
-├── features.js                # Ярлыки, обои, модальные окна, миграция cros_v2 -> cros_v3
-├── features.css               # Стили рабочего стола, карточек, диалогов, тем
-├── widgets.js                 # Модульный движок виджетов (Clock, Weather, Note, Todo, etc.)
+├── features.js                # Ярлыки, магнитная сетка, обои, модальные окна
+├── features.css               # Стили рабочего стола, карточек, диалогов, тем, закрепления
+├── widgets.js                 # Модульный движок виджетов (закрепление, сетка, Clock, Weather, Note, etc.)
 ├── services/
 │   ├── google-service.js      # Google OAuth, Calendar, Gmail, Drive, RSS
 │   └── weather-service.js     # Open-Meteo клиент, геокодирование, кэш
 ├── icons/                     # Иконки расширения (16, 48, 128)
 ├── scripts/
-│   └── sync-github.sh         # Безопасный скрипт синхронизации (только feature/CrOS_0.3)
-├── tests/                     # Opaque-box E2E тесты (Tiers 1-4)
+│   └── sync-github.sh         # Безопасный скрипт синхронизации (ветка feature/CrOS_0.4)
+├── tests/                     # E2E тесты
 ├── .gitignore                 # Исключение .agents/, логов и временных файлов
-├── README.md                  # Документация v0.3, Kiosk-режим, ограничения
+├── README.md                  # Документация v0.4
 └── PROJECT.md                 # Документация проекта и архитектурный индекс
 ```
 

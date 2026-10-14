@@ -5,8 +5,8 @@
 set -e
 
 COMMIT_MSG="${1:-Update extension version and modules}"
-REQUIRED_BRANCH="feature/CrOS_0.3"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+TARGET_BRANCH="${CURRENT_BRANCH:-feature/CrOS_0.4}"
 
 echo "=================================================="
 echo "🚀 CrOS Modular Assistant — Синхронизация с GitHub"
@@ -20,19 +20,12 @@ fi
 
 if [ "$CURRENT_BRANCH" = "main" ]; then
   echo "❌ Ошибка безопасности: Прямой пуш в ветку 'main' строго запрещен политикой проекта." >&2
-  echo "Пожалуйста, переключитесь на ветку '$REQUIRED_BRANCH' перед отправкой изменений:" >&2
-  echo "  git checkout $REQUIRED_BRANCH" >&2
+  echo "Пожалуйста, создайте или переключитесь на feature-ветку перед отправкой изменений:" >&2
+  echo "  git checkout feature/CrOS_0.4" >&2
   exit 1
 fi
 
-if [ "$CURRENT_BRANCH" != "$REQUIRED_BRANCH" ]; then
-  echo "❌ Ошибка: Текущая ветка '$CURRENT_BRANCH'. Разрешено отправлять изменения только в ветку '$REQUIRED_BRANCH'." >&2
-  echo "Пожалуйста, переключитесь на ветку '$REQUIRED_BRANCH':" >&2
-  echo "  git checkout $REQUIRED_BRANCH" >&2
-  exit 1
-fi
-
-echo "✓ Проверка ветки пройдена: активна '$REQUIRED_BRANCH'"
+echo "✓ Проверка ветки пройдена: активна '$TARGET_BRANCH'"
 
 # 2. Проверка git статуса и добавление изменений
 git add -A ":!.agents" ":!*.agents" 2>/dev/null || git add -A
@@ -51,11 +44,11 @@ if [ -z "$REMOTE_URL" ]; then
   echo "⚠️ Внимание: Удаленный репозиторий 'origin' еще не привязан к GitHub."
   echo "Для первой привязки выполните:"
   echo "  git remote add origin https://github.com/0theos/<ИМЯ_РЕПОЗИТОРИЯ>.git"
-  echo "  git push -u origin $REQUIRED_BRANCH"
+  echo "  git push -u origin $TARGET_BRANCH"
 else
-  echo "🌐 Отправка новой версии на GitHub ($REMOTE_URL, ветка $REQUIRED_BRANCH)..."
-  git push origin "$REQUIRED_BRANCH"
-  echo "✓ Новая версия успешно отправлена на GitHub ($REQUIRED_BRANCH)!"
+  echo "🌐 Отправка новой версии на GitHub ($REMOTE_URL, ветка $TARGET_BRANCH)..."
+  git push origin "$TARGET_BRANCH"
+  echo "✓ Новая версия успешно отправлена на GitHub ($TARGET_BRANCH)!"
 fi
 
 echo "=================================================="
