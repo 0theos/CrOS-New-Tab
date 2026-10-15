@@ -443,10 +443,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsPanel.classList.remove('open');
   });
 
-  document.addEventListener('click', (e) => {
-    if (!settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
-      settingsPanel.classList.remove('open');
-    }
+  // Close only on a real click outside. Use pointerdown (before any re-render detaches the
+  // target) and ignore dialogs / context menus opened from the settings panel.
+  document.addEventListener('pointerdown', (e) => {
+    if (!settingsPanel.classList.contains('open')) return;
+    const t = e.target;
+    if (!(t instanceof Element) || !t.isConnected) return;
+    if (settingsPanel.contains(t) || settingsBtn.contains(t)) return;
+    if (t.closest('dialog, .ctx-menu, .cros-dialog')) return;
+    settingsPanel.classList.remove('open');
   });
 
   // Restore saved theme or default to Auto

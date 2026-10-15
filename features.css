@@ -13,10 +13,10 @@ body.has-wallpaper { background-image: none; }
 #shortcuts, #widgets { position: absolute; inset: 0; pointer-events: none; }
 #shortcuts > *, #widgets > * { pointer-events: auto; }
 
-/* Compact clock, center top, below search */
+/* Compact clock, center top, above search */
 .m3-clock-card {
   position: fixed;
-  top: 70px;
+  top: 14px;
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -31,10 +31,10 @@ body.has-wallpaper { background-image: none; }
 .m3-time { font-size: 2.2rem; letter-spacing: -1px; }
 .m3-date { margin-top: 2px; font-size: .8rem; }
 
-/* Search, top center */
-.search-form { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; width: min(520px, 42vw); }
+/* Search, top center, below clock */
+.search-form { position: fixed; top: 112px; left: 50%; transform: translateX(-50%); z-index: 5; width: min(520px, 42vw); }
 .search-input {
-  width: 100%; height: 44px; border-radius: 22px; padding: 0 48px 0 46px;
+  width: 100%; height: 44px; border-radius: 22px; padding: 0 18px 0 46px;
   border: 1px solid var(--theme-border); background: var(--theme-surface-high);
   color: var(--theme-text); font: inherit; font-size: .95rem; outline: none;
   backdrop-filter: blur(12px); user-select: text; transition: border-color .2s, box-shadow .2s;
@@ -42,11 +42,12 @@ body.has-wallpaper { background-image: none; }
 .search-input:focus { border-color: var(--theme-accent); box-shadow: 0 0 0 3px var(--theme-ambient); }
 .search-input::placeholder { color: var(--theme-text-subtle); }
 .search-icon { position: absolute; left: 15px; top: 11px; color: var(--theme-text-subtle); pointer-events: none; }
-.search-hint {
-  position: absolute; right: 14px; top: 11px; width: 22px; height: 22px; border-radius: 6px;
-  border: 1px solid var(--theme-border); color: var(--theme-text-subtle);
-  font-size: 12px; display: flex; align-items: center; justify-content: center; pointer-events: none;
-}
+.search-suggest { position: absolute; top: 50px; left: 0; right: 0; background: var(--theme-surface-high); border: 1px solid var(--theme-border);
+  border-radius: 16px; padding: 6px; backdrop-filter: blur(20px); box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 20; }
+.search-suggest[hidden] { display: none; }
+.search-suggest-item { padding: 8px 14px; border-radius: 10px; font-size: .9rem; color: var(--theme-text); cursor: pointer; user-select: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-suggest-item:hover, .search-suggest-item.active { background: var(--theme-surface); }
 
 /* Windows-style desktop icons */
 .shortcut {

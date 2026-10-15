@@ -42,7 +42,8 @@
    */
   function migrateStorage(data) {
     const existingV3 = data && data.cros_v3;
-    if (existingV3 && typeof existingV3 === 'object' && existingV3.version === 3) {
+    if (existingV3 && typeof existingV3 === 'object' && existingV3.version >= 3) {
+      existingV3.version = 3;
       if (!Array.isArray(existingV3.shortcuts)) existingV3.shortcuts = [];
       if (!Array.isArray(existingV3.widgets)) existingV3.widgets = [];
       if (!existingV3.wallpaper || typeof existingV3.wallpaper !== 'object') {
@@ -95,7 +96,7 @@
     ];
 
     let migratedWidgets = [];
-    if (Array.isArray(v2.widgets) && v2.widgets.length > 0) {
+    if (Array.isArray(v2.widgets)) {
       migratedWidgets = v2.widgets.map((w) => {
         const copy = Object.assign({}, w);
         if (copy.enabled === undefined) copy.enabled = true;
@@ -140,7 +141,7 @@
     const autoFullscreen = Boolean(v2.autoFullscreen);
 
     return {
-      version: 4,
+      version: 3,
       shortcuts,
       widgets: migratedWidgets,
       wallpaper,
@@ -223,33 +224,112 @@
   };
 
   /* ---------- Search ---------- */
+  const HISTORY_KEY = 'cros_search_history';
+  const MAX_HISTORY = 200;
+  const loadHistory = () => {
+    try { const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; }
+  };
+  const saveHistory = (list) => {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, MAX_HISTORY))); } catch (_) {}
+    if (hasChrome) chrome.storage.local.set({ [HISTORY_KEY]: list.slice(0, MAX_HISTORY) });
+  };
+  function addHistory(q) {
+    const list = loadHistory().filter((x) => x.q.toLowerCase() !== q.toLowerCase());
+    const prev = loadHistory().find((x) => x.q.toLowerCase() === q.toLowerCase());
+    list.unshift({ q, n: (prev ? prev.n : 0) + 1, t: Date.now() });
+    saveHistory(list);
+  }
+  // Pull Google queries from browser history (needs the "history" permission)
+  async function importGoogleHistory() {
+    if (!(hasChrome && chrome.history && chrome.history.search)) return;
+    try {
+      const items = await new Promise((r) => chrome.history.search({ text: 'google.com/search', maxResults: 300, startTime: 0 }, r));
+      const list = loadHistory();
+      const seen = new Map(list.map((x) => [x.q.toLowerCase(), x]));
+      (items || []).forEach((it) => {
+        try {
+          const u = new URL(it.url);
+          if (!/(^|\.)google\.[a-z.]+$/.test(u.hostname) || u.pathname !== '/search') return;
+          const q = (u.searchParams.get('q') || '').trim();
+          if (!q) return;
+          const ex = seen.get(q.toLowerCase());
+          if (ex) { ex.t = Math.max(ex.t || 0, it.lastVisitTime || 0); }
+          else { const o = { q, n: it.visitCount || 1, t: it.lastVisitTime || 0 }; seen.set(q.toLowerCase(), o); list.push(o); }
+        } catch (_) {}
+      });
+      list.sort((a, b) => (b.t || 0) - (a.t || 0));
+      saveHistory(list);
+    } catch (_) {}
+  }
+  function suggest(prefix) {
+    const p = prefix.trim().toLowerCase();
+    const list = loadHistory();
+    const now = Date.now();
+    return list
+      .filter((x) => x.q.toLowerCase() !== p && (!p || x.q.toLowerCase().includes(p)))
+      .map((x) => ({ x, score: (x.q.toLowerCase().startsWith(p) ? 1000 : 0) + x.n * 5 - (now - (x.t || 0)) / 8.64e7 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((o) => o.x.q);
+  }
+  // Every search/address opens in a NEW tab
+  function runSearch(q) {
+    q = q.trim();
+    if (!q) return;
+    const direct = /^(https?:\/\/|[\w-]+(\.[\w-]+)+(\/|$))/i.test(q) && !/\s/.test(q);
+    if (direct) {
+      const u = safeUrl(q);
+      if (u) window.open(u, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    addHistory(q);
+    const url = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+    if (hasChrome && chrome.tabs && chrome.tabs.create) chrome.tabs.create({ url, active: true });
+    else window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   function initSearch() {
     const form = $('search-form'), input = $('search-input');
+    const box = el('div', { className: 'search-suggest', hidden: true });
+    form.append(box);
+    let items = [], active = -1;
+    const hide = () => { box.hidden = true; active = -1; };
+    const paint = () => {
+      box.replaceChildren();
+      items.forEach((q, i) => {
+        const b = el('div', { className: 'search-suggest-item' + (i === active ? ' active' : ''), textContent: q });
+        b.addEventListener('mousedown', (e) => { e.preventDefault(); input.value = q; hide(); runSearch(q); });
+        box.append(b);
+      });
+      box.hidden = !items.length;
+    };
+    const refresh = () => { items = suggest(input.value); active = -1; paint(); };
+    input.addEventListener('input', refresh);
+    input.addEventListener('focus', refresh);
+    input.addEventListener('blur', () => setTimeout(hide, 100));
+    input.addEventListener('keydown', (e) => {
+      if (!items.length || box.hidden) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % items.length; input.value = items[active]; paint(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = (active - 1 + items.length) % items.length; input.value = items[active]; paint(); }
+      else if (e.key === 'Escape') hide();
+    });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const q = input.value.trim();
       if (!q) return;
-      const direct = /^(https?:\/\/|[\w-]+(\.[\w-]+)+(\/|$))/i.test(q) && !/\s/.test(q);
-      const targetUrl = direct ? normUrl(q) : 'https://www.google.com/search?q=' + encodeURIComponent(q);
-      if (direct) {
-        location.href = targetUrl;
-      }
-      else if (chrome.search && chrome.search.query) {
-        chrome.search.query({ text: q, disposition: 'CURRENT_TAB' });
-      }
-      else {
-        location.href = targetUrl;
-      }
+      hide();
+      runSearch(q);
+      input.value = '';
     });
-    // Quick access: type anywhere, or "/" to focus
+    // Quick access: just start typing anywhere to focus
     document.addEventListener('keydown', (e) => {
       const t = e.target;
       if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === '/' ) { e.preventDefault(); input.focus(); }
-      else if (e.key.length === 1) input.focus();
+      if (e.key.length === 1) input.focus();
     });
     setTimeout(() => input.focus(), 50);
+    importGoogleHistory();
   }
 
   /* ---------- Desktop shortcuts (Windows-style icon grid) ---------- */
@@ -313,6 +393,7 @@
         if (e.button !== 0) return;
         document.querySelectorAll('.shortcut.selected').forEach((n) => n.classList.remove('selected'));
         node.classList.add('selected');
+        if (s.pinned) return; // pinned shortcuts cannot be moved
         const sx = e.clientX, sy = e.clientY, ox = node.offsetLeft, oy = node.offsetTop;
         let dragging = false;
         const mv = (ev) => {
@@ -355,6 +436,7 @@
         node.classList.add('selected');
         menu(e.clientX, e.clientY, [
           ['Открыть', open],
+          [s.pinned ? 'Открепить' : 'Закрепить', () => { s.pinned = !s.pinned; save(); }],
           ...(isApp ? [] : [['Открыть в новой вкладке', () => window.open(url, '_blank')]]),
           ['Удалить', () => { state.shortcuts = state.shortcuts.filter((x) => x.id !== s.id); save(); renderShortcuts(); }],
         ]);
@@ -959,7 +1041,6 @@
         ['Новый ярлык', addShortcutDialog],
         ['Ярлык приложения…', addAppDialog],
         ['Новый виджет', addWidgetCatalogDialog],
-        ['Полный экран', toggleFullscreen],
         ['Настройки и обои', () => $('settings-toggle').click()],
       ]);
     });
@@ -978,8 +1059,6 @@
       clearTimeout(rt);
       rt = setTimeout(renderShortcuts, 150);
     });
-
-    $('fullscreen-toggle').addEventListener('click', toggleFullscreen);
 
     // Browsers require a user gesture to enter fullscreen
     document.addEventListener('pointerdown', () => {
