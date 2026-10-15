@@ -5,19 +5,29 @@
 // ==========================================
 // 1. Digital Clock Logic
 // ==========================================
+window.CROS_CLOCK = window.CROS_CLOCK || { format24h: true, showSeconds: false, showDate: true };
 function updateClock() {
+  const cfg = window.CROS_CLOCK;
   const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
+  let h = now.getHours();
+  if (cfg.format24h === false) h = h % 12 || 12;
+  const hours = cfg.format24h === false ? String(h) : String(h).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
 
   const hoursEl = document.getElementById('hours');
   const minutesEl = document.getElementById('minutes');
+  const secondsEl = document.getElementById('seconds');
+  const secWrap = document.getElementById('seconds-wrap');
   const dateEl = document.getElementById('clock-date');
 
   if (hoursEl && hoursEl.textContent !== hours) hoursEl.textContent = hours;
   if (minutesEl && minutesEl.textContent !== minutes) minutesEl.textContent = minutes;
+  if (secWrap) secWrap.style.display = cfg.showSeconds ? '' : 'none';
+  if (secondsEl && secondsEl.textContent !== seconds) secondsEl.textContent = seconds;
 
   if (dateEl) {
+    dateEl.style.display = cfg.showDate === false ? 'none' : '';
     const locale = navigator.language || 'ru-RU';
     const formatter = new Intl.DateTimeFormat(locale, {
       weekday: 'long',
@@ -29,6 +39,7 @@ function updateClock() {
     if (dateEl.textContent !== formattedDate) dateEl.textContent = formattedDate;
   }
 }
+window.updateClock = updateClock;
 
 updateClock();
 setTimeout(() => {

@@ -28,8 +28,16 @@ body.has-wallpaper { background-image: none; }
   align-items: center;
   justify-content: center;
 }
-.m3-time { font-size: 2.2rem; letter-spacing: -1px; }
-.m3-date { margin-top: 2px; font-size: .8rem; }
+.m3-time { font-size: var(--clock-size, 2.2rem); letter-spacing: -1px; font-weight: var(--clock-weight, 400); font-family: var(--clock-font, inherit); color: var(--clock-color, var(--theme-text)); }
+.m3-date { margin-top: 2px; font-size: calc(var(--clock-size, 2.2rem) * .36); font-family: var(--clock-font, inherit); color: var(--clock-date-color, var(--theme-accent)); }
+.m3-clock-card.no-card { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; }
+.m3-clock-card { border-radius: var(--clock-radius, 20px); }
+.clock-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.clock-preset { padding: 10px 4px; border-radius: 10px; border: 1px solid var(--theme-border); background: var(--theme-surface); color: var(--theme-text); cursor: pointer; font: inherit; font-size: 12px; }
+.clock-preset.active { border-color: var(--theme-accent); box-shadow: 0 0 0 2px var(--theme-ambient); }
+.clock-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; font-size: 12px; }
+.clock-row input[type=range] { flex: 1; max-width: 150px; }
+.clock-row select { background: var(--theme-surface-high); color: var(--theme-text); border: 1px solid var(--theme-border); border-radius: 8px; padding: 3px; }
 
 /* Search, top center, below clock */
 .search-form { position: fixed; top: 112px; left: 50%; transform: translateX(-50%); z-index: 5; width: min(520px, 42vw); }

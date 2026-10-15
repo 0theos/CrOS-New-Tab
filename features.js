@@ -33,7 +33,8 @@
     autoFullscreen: false,
     closeProtection: true,
     google: { clientId: '', mockMode: false },
-    weather: { city: 'Moscow', lat: 55.7558, lon: 37.6173, units: 'celsius' }
+    weather: { city: 'Moscow', lat: 55.7558, lon: 37.6173, units: 'celsius' },
+    clock: { preset: 'classic' }
   };
 
   /**
@@ -65,6 +66,7 @@
       if (!existingV3.weather || typeof existingV3.weather !== 'object') {
         existingV3.weather = { city: 'Moscow', lat: 55.7558, lon: 37.6173, units: 'celsius' };
       }
+      if (!existingV3.clock || typeof existingV3.clock !== 'object') existingV3.clock = { preset: 'classic' };
       return existingV3;
     }
 
@@ -142,6 +144,7 @@
 
     return {
       version: 3,
+      clock: { preset: 'classic' },
       shortcuts,
       widgets: migratedWidgets,
       wallpaper,
@@ -622,6 +625,88 @@
     });
   }
 
+  /* ---------- Clock designs ---------- */
+  const CLOCK_BASE = { format24h: true, showSeconds: false, showDate: true, card: true, size: 2.2, weight: 400, font: 'sans', color: '', radius: 20 };
+  const CLOCK_PRESETS = {
+    classic: { label: 'Классика', cfg: {} },
+    minimal: { label: 'Минимал', cfg: { card: false, size: 3.6, weight: 200 } },
+    bold: { label: 'Жирные', cfg: { card: false, size: 4.2, weight: 700, color: 'accent' } },
+    mono: { label: 'Моно', cfg: { size: 2.6, weight: 500, font: 'mono', showSeconds: true, radius: 8 } },
+    serif: { label: 'Серифы', cfg: { size: 3, weight: 400, font: 'serif', radius: 28 } },
+    compact: { label: 'Компакт', cfg: { size: 1.6, showDate: false, radius: 999 } },
+  };
+  const CLOCK_FONTS = { sans: 'inherit', mono: "'Roboto Mono', ui-monospace, monospace", serif: "Georgia, 'Times New Roman', serif", round: "'Google Sans', 'Nunito', system-ui, sans-serif" };
+  const clockCfg = () => Object.assign({}, CLOCK_BASE, (CLOCK_PRESETS[state.clock.preset] || CLOCK_PRESETS.classic).cfg, state.clock.custom || {});
+
+  function positionSearch() {
+    const card = $('clock-card'), form = $('search-form');
+    if (!card || !form) return;
+    form.style.top = Math.round(card.getBoundingClientRect().bottom + 20) + 'px';
+  }
+
+  function applyClock() {
+    const c = clockCfg(), card = $('clock-card');
+    if (!card) return;
+    const st = card.style;
+    st.setProperty('--clock-size', c.size + 'rem');
+    st.setProperty('--clock-weight', c.weight);
+    st.setProperty('--clock-font', CLOCK_FONTS[c.font] || 'inherit');
+    st.setProperty('--clock-radius', c.radius + 'px');
+    const col = c.color === 'accent' ? 'var(--theme-accent)' : c.color;
+    if (col) { st.setProperty('--clock-color', col); st.setProperty('--clock-date-color', col); }
+    else { st.removeProperty('--clock-color'); st.removeProperty('--clock-date-color'); }
+    card.classList.toggle('no-card', !c.card);
+    window.CROS_CLOCK = { format24h: c.format24h, showSeconds: c.showSeconds, showDate: c.showDate };
+    if (window.updateClock) window.updateClock();
+    positionSearch();
+  }
+
+  function renderClockSettings() {
+    const mount = $('clock-settings-mount');
+    if (!mount) return;
+    mount.replaceChildren();
+    const cur = clockCfg();
+    const setCustom = (patch) => { state.clock.custom = Object.assign({}, state.clock.custom || {}, patch); save(); applyClock(); };
+
+    const presets = el('div', { className: 'clock-presets' });
+    Object.entries(CLOCK_PRESETS).forEach(([key, p]) => {
+      const b = el('button', { type: 'button', className: 'clock-preset' + (state.clock.preset === key && !state.clock.custom ? ' active' : ''), textContent: p.label });
+      b.onclick = () => { state.clock = { preset: key }; save(); applyClock(); renderClockSettings(); };
+      presets.append(b);
+    });
+
+    const check = (label, key) => {
+      const cb = el('input', { type: 'checkbox', checked: !!cur[key] });
+      cb.onchange = () => setCustom({ [key]: cb.checked });
+      return el('label', { className: 'clock-row' }, el('span', { textContent: label }), cb);
+    };
+    const range = (label, key, min, max, step) => {
+      const r = el('input', { type: 'range', min, max, step, value: cur[key] });
+      r.oninput = () => { state.clock.custom = Object.assign({}, state.clock.custom || {}, { [key]: +r.value }); applyClock(); };
+      r.onchange = () => setCustom({ [key]: +r.value });
+      return el('label', { className: 'clock-row' }, el('span', { textContent: label }), r);
+    };
+    const fontSel = el('select', {}, ...[['sans', 'Обычный'], ['round', 'Округлый'], ['mono', 'Моноширинный'], ['serif', 'С засечками']].map(([v, t]) => el('option', { value: v, textContent: t, selected: cur.font === v })));
+    fontSel.onchange = () => setCustom({ font: fontSel.value });
+    const colorIn = el('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(cur.color) ? cur.color : '#8ab4f8' });
+    colorIn.onchange = () => setCustom({ color: colorIn.value });
+    const themeColor = el('button', { type: 'button', className: 'btn', textContent: 'Тема' });
+    themeColor.onclick = () => { setCustom({ color: '' }); renderClockSettings(); };
+    const reset = el('button', { type: 'button', className: 'btn', textContent: 'Сбросить свои настройки' });
+    reset.onclick = () => { state.clock = { preset: state.clock.preset }; save(); applyClock(); renderClockSettings(); };
+
+    mount.append(el('div', { className: 'settings-section settings-extra' },
+      el('div', { className: 'section-label', textContent: 'Часы' }),
+      el('div', { className: 'section-desc', textContent: 'Готовые дизайны и свои настройки' }),
+      presets,
+      check('24-часовой формат', 'format24h'), check('Секунды', 'showSeconds'), check('Показывать дату', 'showDate'), check('Фон-карточка', 'card'),
+      range('Размер', 'size', 1.2, 6, 0.1), range('Толщина', 'weight', 100, 800, 100), range('Скругление', 'radius', 0, 40, 2),
+      el('label', { className: 'clock-row' }, el('span', { textContent: 'Шрифт' }), fontSel),
+      el('div', { className: 'clock-row' }, el('span', { textContent: 'Цвет' }), el('span', {}, colorIn, themeColor)),
+      el('div', { className: 'btn-row' }, reset)
+    ));
+  }
+
   /* ---------- Wallpaper ---------- */
   function applyWallpaper() {
     const wp = state.wallpaper;
@@ -692,6 +777,8 @@
         }
       });
     });
+
+    renderClockSettings();
 
     // 2. Widgets tab catalog button
     const addWidgetBtn = $('btn-add-widget-catalog');
@@ -1030,6 +1117,8 @@
     }
 
     applyWallpaper();
+    applyClock();
+    if (window.ResizeObserver) new ResizeObserver(positionSearch).observe($('clock-card'));
     initSettings();
     renderWidgetsManagerList();
 
@@ -1058,6 +1147,7 @@
     addEventListener('resize', () => {
       clearTimeout(rt);
       rt = setTimeout(renderShortcuts, 150);
+      positionSearch();
     });
 
     // Browsers require a user gesture to enter fullscreen

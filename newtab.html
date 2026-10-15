@@ -438,7 +438,7 @@
   <!-- M3 Digital Clock (centered below search) -->
   <main class="m3-clock-card" id="clock-card" aria-label="Часы">
     <div class="m3-time" id="clock-time">
-      <span id="hours">--</span><span class="m3-time-colon">:</span><span id="minutes">--</span>
+      <span id="hours">--</span><span class="m3-time-colon">:</span><span id="minutes">--</span><span id="seconds-wrap" style="display:none"><span class="m3-time-colon">:</span><span id="seconds">--</span></span>
     </div>
     <div class="m3-date" id="clock-date">--</div>
   </main>
@@ -524,6 +524,9 @@
           </button>
         </div>
       </div>
+
+      <!-- Clock design mount point -->
+      <div id="clock-settings-mount"></div>
 
       <!-- Wallpaper mount point -->
       <div id="wallpaper-settings-mount"></div>
